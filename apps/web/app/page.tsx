@@ -208,6 +208,9 @@ export default function Home() {
               <Button color="inherit" component={Link} href="/profile" type="button" variant="contained">
                 {t.profile}
               </Button>
+              <Button color="inherit" component={Link} href="/guilds" type="button" variant="outlined">
+                {t.guilds}
+              </Button>
               <Button color="inherit" onClick={() => void logout(apiBaseUrl)} type="button" variant="outlined">
                 {t.logout}
               </Button>

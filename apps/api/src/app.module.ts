@@ -4,6 +4,7 @@ import { MongooseModule } from "@nestjs/mongoose";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { AuthModule } from "./auth/auth.module";
+import { GuildsModule } from "./guilds/guilds.module";
 import { MessagesModule } from "./messages/messages.module";
 import { UsersModule } from "./users/users.module";
 
@@ -23,6 +24,7 @@ const DEFAULT_MONGODB_URI = "mongodb://chat_api:chat_api_password@localhost:2701
     UsersModule,
     AuthModule,
     MessagesModule,
+    GuildsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
