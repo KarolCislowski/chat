@@ -57,6 +57,7 @@ export class MessagesService {
       id: profile.accountId.toString(),
       displayName: profile.displayName,
       avatarUrl: profile.avatarUrl,
+      onlineStatus: profile.onlineStatus,
     };
   }
 

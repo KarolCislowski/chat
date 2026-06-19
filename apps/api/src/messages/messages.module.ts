@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { JwtModule } from "@nestjs/jwt";
 import { MongooseModule } from "@nestjs/mongoose";
 import { UserProfile, UserProfileSchema } from "../users/schemas/user-profile.schema";
+import { UsersModule } from "../users/users.module";
 import { Message, MessageSchema } from "./schemas/message.schema";
 import { MessagesController } from "./messages.controller";
 import { MessagesGateway } from "./messages.gateway";
@@ -10,6 +11,7 @@ import { MessagesService } from "./messages.service";
 
 @Module({
   imports: [
+    UsersModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

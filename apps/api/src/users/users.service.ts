@@ -3,7 +3,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
 import { UserAccount, UserAccountDocument, UserRole } from "./schemas/user-account.schema";
-import { UserProfile, UserProfileDocument } from "./schemas/user-profile.schema";
+import { OnlineStatus, UserProfile, UserProfileDocument } from "./schemas/user-profile.schema";
 
 type CreateAccountInput = {
   displayName: string;
@@ -80,6 +80,16 @@ export class UsersService {
     const profile = await this.profileModel
       .findOneAndUpdate({ accountId }, { $set: dto }, { new: true, runValidators: true })
       .exec();
+
+    if (!profile) {
+      throw new NotFoundException("User profile was not found.");
+    }
+
+    return profile;
+  }
+
+  async updateOnlineStatus(accountId: string, onlineStatus: OnlineStatus) {
+    const profile = await this.profileModel.findOneAndUpdate({ accountId }, { $set: { onlineStatus } }, { new: true }).exec();
 
     if (!profile) {
       throw new NotFoundException("User profile was not found.");

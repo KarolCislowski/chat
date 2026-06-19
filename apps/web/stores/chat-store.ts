@@ -7,6 +7,7 @@ export type ApiHealth = {
 };
 
 export type ChatConnectionStatus = "connected" | "connecting" | "disconnected";
+export type OnlineStatus = "offline" | "online" | "away" | "busy";
 
 export type Message = {
   _id: string;
@@ -15,6 +16,7 @@ export type Message = {
     id: string;
     displayName: string;
     avatarUrl: string | null;
+    onlineStatus: OnlineStatus;
   } | null;
   channelType: "global" | "guild" | "whisper";
   guildId: string | null;
@@ -24,6 +26,11 @@ export type Message = {
   createdAt: string;
   editedAt: string | null;
   deletedAt: string | null;
+};
+
+type PresenceChangedEvent = {
+  accountId: string;
+  onlineStatus: OnlineStatus;
 };
 
 type ChatState = {
@@ -99,6 +106,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
     socket.on("message:created", (message: Message) => {
       set((state) => ({
         messages: upsertMessage(state.messages, message),
+      }));
+    });
+
+    socket.on("presence:changed", (presence: PresenceChangedEvent) => {
+      set((state) => ({
+        messages: state.messages.map((message) =>
+          message.senderId === presence.accountId && message.sender
+            ? {
+                ...message,
+                sender: {
+                  ...message.sender,
+                  onlineStatus: presence.onlineStatus,
+                },
+              }
+            : message,
+        ),
       }));
     });
   },

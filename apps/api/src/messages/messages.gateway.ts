@@ -4,12 +4,14 @@ import {
   ConnectedSocket,
   MessageBody,
   OnGatewayConnection,
+  OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from "@nestjs/websockets";
 import { Server, Socket } from "socket.io";
 import { UserRole } from "../users/schemas/user-account.schema";
+import { UsersService } from "../users/users.service";
 import { CreateGlobalMessageDto } from "./dto/create-global-message.dto";
 import { MessagesService } from "./messages.service";
 
@@ -37,8 +39,9 @@ type AccessTokenPayload = {
   },
   namespace: "chat",
 })
-export class MessagesGateway implements OnGatewayConnection {
+export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(MessagesGateway.name);
+  private readonly socketsByAccountId = new Map<string, Set<string>>();
 
   @WebSocketServer()
   private readonly server!: Server;
@@ -46,6 +49,7 @@ export class MessagesGateway implements OnGatewayConnection {
   constructor(
     private readonly jwtService: JwtService,
     private readonly messagesService: MessagesService,
+    private readonly usersService: UsersService,
   ) {}
 
   async handleConnection(client: AuthenticatedSocket) {
@@ -56,12 +60,23 @@ export class MessagesGateway implements OnGatewayConnection {
         email: payload.email,
         role: payload.role,
       };
+      await this.registerPresence(client, payload.sub);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown socket auth error.";
       this.logger.warn(`Rejected socket connection: ${message}`);
       client.emit("chat:error", { message: "Chat session expired. Please log in again." });
       client.disconnect(true);
     }
+  }
+
+  async handleDisconnect(client: AuthenticatedSocket) {
+    const accountId = client.data.user?.accountId;
+
+    if (!accountId) {
+      return;
+    }
+
+    await this.unregisterPresence(client, accountId);
   }
 
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
@@ -103,5 +118,44 @@ export class MessagesGateway implements OnGatewayConnection {
 
     const [type, token] = client.handshake.headers.authorization?.split(" ") ?? [];
     return type === "Bearer" ? token : undefined;
+  }
+
+  private async registerPresence(client: Socket, accountId: string) {
+    const sockets = this.socketsByAccountId.get(accountId) ?? new Set<string>();
+    const wasOffline = sockets.size === 0;
+
+    sockets.add(client.id);
+    this.socketsByAccountId.set(accountId, sockets);
+
+    if (!wasOffline) {
+      return;
+    }
+
+    await this.usersService.updateOnlineStatus(accountId, "online");
+    this.server.emit("presence:changed", {
+      accountId,
+      onlineStatus: "online",
+    });
+  }
+
+  private async unregisterPresence(client: Socket, accountId: string) {
+    const sockets = this.socketsByAccountId.get(accountId);
+
+    if (!sockets) {
+      return;
+    }
+
+    sockets.delete(client.id);
+
+    if (sockets.size > 0) {
+      return;
+    }
+
+    this.socketsByAccountId.delete(accountId);
+    await this.usersService.updateOnlineStatus(accountId, "offline");
+    this.server.emit("presence:changed", {
+      accountId,
+      onlineStatus: "offline",
+    });
   }
 }

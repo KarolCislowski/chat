@@ -343,6 +343,7 @@ export default function Home() {
               {messages.map((message) => {
                 const isOwnMessage = message.senderId === account?.id;
                 const author = isOwnMessage ? profile?.displayName ?? t.profile : message.sender?.displayName ?? message.senderId;
+                const authorStatus = message.sender?.onlineStatus ?? (isOwnMessage ? profile?.onlineStatus : undefined);
                 const messageTime = new Intl.DateTimeFormat(language, {
                   hour: "2-digit",
                   minute: "2-digit",
@@ -373,9 +374,21 @@ export default function Home() {
                         mb: 1,
                       }}
                     >
-                      <Typography component="span" sx={{ fontSize: "inherit" }}>
-                        {author}
-                      </Typography>
+                      <Box component="span" sx={{ alignItems: "center", display: "inline-flex", gap: 0.75, minWidth: 0 }}>
+                        <Box
+                          component="span"
+                          sx={{
+                            bgcolor: authorStatus === "online" ? "primary.main" : "text.disabled",
+                            borderRadius: "50%",
+                            flex: "0 0 auto",
+                            height: 8,
+                            width: 8,
+                          }}
+                        />
+                        <Typography component="span" sx={{ fontSize: "inherit", overflowWrap: "anywhere" }}>
+                          {author}
+                        </Typography>
+                      </Box>
                       <Typography component="time" sx={{ fontSize: "inherit" }}>
                         {messageTime}
                       </Typography>
