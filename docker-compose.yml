@@ -1,4 +1,18 @@
 services:
+  api:
+    build:
+      context: ./apps/api
+    container_name: chat-api
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      MONGODB_URI: mongodb://chat_api:chat_api_password@mongodb:27017/chat
+
   mongodb:
     image: mongo:7.0
     container_name: chat-mongodb
