@@ -10,7 +10,7 @@ cp .env.example .env
 npm run dev
 ```
 
-The web app runs at `http://localhost:3001` in local development.
+The web app runs at `http://localhost:3000` in local development.
 
 ## Docker Compose
 
@@ -20,4 +20,4 @@ From the repository root:
 docker compose up -d
 ```
 
-The web app is available at `http://localhost:3001`.
+The web app is available at `http://localhost:3000`.

@@ -20,4 +20,4 @@ From the repository root:
 docker compose up -d
 ```
 
-The API is available at `http://localhost:3000`, and the health endpoint is `http://localhost:3000/health`.
+The API is available at `http://localhost:5000`, and the health endpoint is `http://localhost:5000/health`.
