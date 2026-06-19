@@ -27,7 +27,7 @@ The API is available at `http://localhost:5000`, and the health endpoint is `htt
 User accounts and user profiles are stored separately:
 
 - `UserAccount`: email, password hash, refresh token hashes, role, creation date
-- `UserProfile`: account id, display name, avatar URL, status message, online status
+- `UserProfile`: account id, display name, avatar URL, status message, online status, UI language
 
 Available endpoints:
 

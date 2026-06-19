@@ -1,0 +1,31 @@
+import { en } from "./en";
+
+export const pl = {
+  apiConnected: "API i MongoDB dzialaja",
+  apiDisconnected: "API niedostepne",
+  apiNoDatabase: "API dziala, MongoDB nie jest polaczone",
+  apiTitle: "API",
+  chat: "Chat",
+  chatLockedBody:
+    "Dostep do rozmow jest dostepny tylko dla uzytkownikow z aktywna sesja JWT. Uzyj formularza logowania lub rejestracji w panelu bocznym.",
+  chatLockedTitle: "Zaloguj sie, aby korzystac z chatu",
+  conversationRequiresLogin: "wymaga logowania",
+  conversations: "Rozmowy",
+  createAccount: "Utworz konto",
+  development: "Development",
+  developmentChat: "Development Chat",
+  displayName: "Nazwa",
+  email: "Email",
+  language: "Jezyk",
+  local: "lokalnie",
+  login: "Login",
+  logout: "Wyloguj",
+  message: "Wiadomosc",
+  newChat: "Nowa rozmowa",
+  password: "Haslo",
+  profile: "Profil",
+  register: "Rejestracja",
+  send: "Wyslij",
+  typeMessage: "Napisz wiadomosc...",
+  workspace: "Workspace",
+} satisfies Record<keyof typeof en, string>;

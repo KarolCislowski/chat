@@ -1,0 +1,31 @@
+import { en } from "./en";
+
+export const sv = {
+  apiConnected: "API och MongoDB körs",
+  apiDisconnected: "API är inte tillgängligt",
+  apiNoDatabase: "API körs, MongoDB är inte ansluten",
+  apiTitle: "API",
+  chat: "Chatt",
+  chatLockedBody:
+    "Åtkomst till chatten är bara tillgänglig för användare med en aktiv JWT-session. Använd formuläret för inloggning eller registrering i sidopanelen.",
+  chatLockedTitle: "Logga in för att använda chatten",
+  conversationRequiresLogin: "kräver inloggning",
+  conversations: "Konversationer",
+  createAccount: "Skapa konto",
+  development: "Utveckling",
+  developmentChat: "Utvecklingschatt",
+  displayName: "Visningsnamn",
+  email: "E-post",
+  language: "Språk",
+  local: "lokalt",
+  login: "Logga in",
+  logout: "Logga ut",
+  message: "Meddelande",
+  newChat: "Ny chatt",
+  password: "Lösenord",
+  profile: "Profil",
+  register: "Registrera",
+  send: "Skicka",
+  typeMessage: "Skriv ett meddelande...",
+  workspace: "Arbetsyta",
+} satisfies Record<keyof typeof en, string>;

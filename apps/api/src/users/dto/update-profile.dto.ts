@@ -1,5 +1,5 @@
 import { IsIn, IsOptional, IsString, IsUrl, MaxLength } from "class-validator";
-import { OnlineStatus } from "../schemas/user-profile.schema";
+import { OnlineStatus, UiLanguage } from "../schemas/user-profile.schema";
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -19,4 +19,8 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsIn(["offline", "online", "away", "busy"])
   onlineStatus?: OnlineStatus;
+
+  @IsOptional()
+  @IsIn(["en", "sv", "pl"])
+  language?: UiLanguage;
 }

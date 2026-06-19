@@ -140,6 +140,7 @@ export class AuthService {
         avatarUrl: profile.avatarUrl,
         statusMessage: profile.statusMessage,
         onlineStatus: profile.onlineStatus,
+        language: profile.language,
       },
       tokens,
     };

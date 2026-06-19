@@ -27,6 +27,7 @@ export class UsersController {
         avatarUrl: profile.avatarUrl,
         statusMessage: profile.statusMessage,
         onlineStatus: profile.onlineStatus,
+        language: profile.language,
       },
     };
   }

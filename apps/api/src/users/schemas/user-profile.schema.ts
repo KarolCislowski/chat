@@ -3,6 +3,7 @@ import { HydratedDocument, Schema as MongooseSchema, Types } from "mongoose";
 import { UserAccount } from "./user-account.schema";
 
 export type OnlineStatus = "offline" | "online" | "away" | "busy";
+export type UiLanguage = "en" | "sv" | "pl";
 
 export type UserProfileDocument = HydratedDocument<UserProfile>;
 
@@ -22,6 +23,9 @@ export class UserProfile {
 
   @Prop({ default: "offline", enum: ["offline", "online", "away", "busy"], required: true })
   onlineStatus!: OnlineStatus;
+
+  @Prop({ default: "en", enum: ["en", "sv", "pl"], required: true })
+  language!: UiLanguage;
 
   createdAt!: Date;
   updatedAt!: Date;

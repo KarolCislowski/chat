@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { UiLanguage } from "../i18n/translations";
 
 export type UserAccount = {
   id: string;
@@ -15,6 +16,7 @@ export type UserProfile = {
   avatarUrl: string | null;
   statusMessage: string;
   onlineStatus: "offline" | "online" | "away" | "busy";
+  language: UiLanguage;
 };
 
 type AuthTokens = {
@@ -41,6 +43,7 @@ type AuthState = {
   logout: (apiBaseUrl: string) => Promise<void>;
   register: (apiBaseUrl: string, email: string, password: string, displayName: string) => Promise<void>;
   setMode: (mode: AuthMode) => void;
+  updateLanguagePreference: (apiBaseUrl: string, language: UiLanguage) => Promise<void>;
 };
 
 async function requestAuth(apiBaseUrl: string, path: string, body: unknown): Promise<AuthResponse> {
@@ -117,6 +120,34 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       setMode: (mode) => set({ error: null, mode }),
+      updateLanguagePreference: async (apiBaseUrl, language) => {
+        const accessToken = get().tokens?.accessToken;
+
+        set((state) => ({
+          profile: state.profile ? { ...state.profile, language } : state.profile,
+        }));
+
+        if (!accessToken) {
+          return;
+        }
+
+        const response = await fetch(`${apiBaseUrl}/users/me/profile`, {
+          body: JSON.stringify({ language }),
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          method: "PATCH",
+        });
+
+        if (!response.ok) {
+          set({ error: `Language preference update failed with ${response.status}` });
+          return;
+        }
+
+        const profile = (await response.json()) as UserProfile;
+        set({ error: null, profile });
+      },
     }),
     {
       name: "chat-auth",
