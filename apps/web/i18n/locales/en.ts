@@ -5,7 +5,7 @@ export const en = {
   apiTitle: "API",
   chat: "Chat",
   chatLockedBody:
-    "Chat access is available only to users with an active JWT session. Use the login or registration form in the sidebar.",
+    "Chat access is available only to users with an active JWT session. Use the sign-in page to log in or create an account.",
   chatLockedTitle: "Log in to use the chat",
   conversationRequiresLogin: "requires login",
   conversations: "Conversations",

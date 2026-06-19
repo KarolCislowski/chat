@@ -7,7 +7,7 @@ export const sv = {
   apiTitle: "API",
   chat: "Chatt",
   chatLockedBody:
-    "Åtkomst till chatten är bara tillgänglig för användare med en aktiv JWT-session. Använd formuläret för inloggning eller registrering i sidopanelen.",
+    "Åtkomst till chatten är bara tillgänglig för användare med en aktiv JWT-session. Använd inloggningssidan för att logga in eller skapa ett konto.",
   chatLockedTitle: "Logga in för att använda chatten",
   conversationRequiresLogin: "kräver inloggning",
   conversations: "Konversationer",

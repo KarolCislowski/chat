@@ -15,7 +15,7 @@ export class UserProfile {
   @Prop({ maxlength: 80, required: true, trim: true })
   displayName!: string;
 
-  @Prop({ default: null, trim: true })
+  @Prop({ default: null, trim: true, type: String })
   avatarUrl!: string | null;
 
   @Prop({ default: "", maxlength: 160, trim: true })

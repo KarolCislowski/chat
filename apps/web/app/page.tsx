@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo } from "react";
 import {
-  Alert,
   Box,
   Button,
   Chip,
@@ -18,6 +19,7 @@ import {
   SelectChangeEvent,
   TextField,
   Typography,
+  Alert,
 } from "@mui/material";
 import { languageLabels, UiLanguage } from "../i18n/translations";
 import { useAuthStore } from "../stores/auth-store";
@@ -25,6 +27,7 @@ import { useChatStore } from "../stores/chat-store";
 import { useLanguageStore } from "../stores/language-store";
 
 export default function Home() {
+  const router = useRouter();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";
   const draft = useChatStore((state) => state.draft);
   const health = useChatStore((state) => state.health);
@@ -33,14 +36,9 @@ export default function Home() {
   const addMessage = useChatStore((state) => state.addMessage);
   const loadHealth = useChatStore((state) => state.loadHealth);
   const setDraft = useChatStore((state) => state.setDraft);
-  const authError = useAuthStore((state) => state.error);
-  const authMode = useAuthStore((state) => state.mode);
-  const isAuthLoading = useAuthStore((state) => state.isLoading);
-  const login = useAuthStore((state) => state.login);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const logout = useAuthStore((state) => state.logout);
   const profile = useAuthStore((state) => state.profile);
-  const register = useAuthStore((state) => state.register);
-  const setAuthMode = useAuthStore((state) => state.setMode);
   const tokens = useAuthStore((state) => state.tokens);
   const updateLanguagePreference = useAuthStore((state) => state.updateLanguagePreference);
   const language = useLanguageStore((state) => state.language);
@@ -72,6 +70,12 @@ export default function Home() {
   const isApiConnected = health?.status === "ok" && health.database === "connected";
   const isAuthenticated = Boolean(profile && tokens?.accessToken);
 
+  useEffect(() => {
+    if (hasHydrated && !isAuthenticated) {
+      router.replace("/auth");
+    }
+  }, [hasHydrated, isAuthenticated, router]);
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -81,22 +85,6 @@ export default function Home() {
     }
 
     addMessage(text);
-  }
-
-  function handleAuthSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    const formData = new FormData(event.currentTarget);
-    const email = String(formData.get("email") ?? "");
-    const password = String(formData.get("password") ?? "");
-    const displayName = String(formData.get("displayName") ?? "");
-
-    if (authMode === "register") {
-      void register(apiBaseUrl, email, password, displayName);
-      return;
-    }
-
-    void login(apiBaseUrl, email, password);
   }
 
   function handleLanguageChange(event: SelectChangeEvent<UiLanguage>) {
@@ -187,69 +175,15 @@ export default function Home() {
               </Button>
             </Box>
           ) : (
-            <Box component="form" onSubmit={handleAuthSubmit} sx={{ display: "grid", gap: 1.5 }}>
-              <Box sx={{ display: "grid", gap: 0.75, gridTemplateColumns: "1fr 1fr" }}>
-                <Button
-                  color="inherit"
-                  onClick={() => setAuthMode("login")}
-                  size="small"
-                  type="button"
-                  variant={authMode === "login" ? "contained" : "outlined"}
-                >
-                  {t.login}
-                </Button>
-                <Button
-                  color="inherit"
-                  onClick={() => setAuthMode("register")}
-                  size="small"
-                  type="button"
-                  variant={authMode === "register" ? "contained" : "outlined"}
-                >
-                  {t.register}
-                </Button>
+            <Box sx={{ display: "grid", gap: 1.5 }}>
+              <Box>
+                <Typography sx={{ color: "#8aa3b5", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase" }}>
+                  {t.profile}
+                </Typography>
+                <Typography sx={{ color: "#b7c3cf", fontSize: "0.9rem" }}>{t.conversationRequiresLogin}</Typography>
               </Box>
-
-              {authMode === "register" ? (
-                <TextField
-                  fullWidth
-                  label={t.displayName}
-                  name="displayName"
-                  required
-                  size="small"
-                  slotProps={{ inputLabel: { sx: { color: "#d9e2ea" } } }}
-                  sx={{ input: { color: "#fff" } }}
-                />
-              ) : null}
-
-              <TextField
-                fullWidth
-                label={t.email}
-                name="email"
-                required
-                size="small"
-                slotProps={{ inputLabel: { sx: { color: "#d9e2ea" } } }}
-                sx={{ input: { color: "#fff" } }}
-                type="email"
-              />
-              <TextField
-                fullWidth
-                label={t.password}
-                name="password"
-                required
-                size="small"
-                slotProps={{ inputLabel: { sx: { color: "#d9e2ea" } } }}
-                sx={{ input: { color: "#fff" } }}
-                type="password"
-              />
-
-              {authError ? (
-                <Alert severity="warning" variant="outlined">
-                  {authError}
-                </Alert>
-              ) : null}
-
-              <Button disabled={isAuthLoading} type="submit" variant="contained">
-                {authMode === "register" ? t.createAccount : t.login}
+              <Button color="inherit" component={Link} href="/auth" type="button" variant="contained">
+                {t.login}
               </Button>
             </Box>
           )}
@@ -460,6 +394,9 @@ export default function Home() {
               <Typography color="text.secondary" sx={{ lineHeight: 1.55 }}>
                 {t.chatLockedBody}
               </Typography>
+              <Button component={Link} href="/auth" sx={{ mt: 2.5 }} variant="contained">
+                {t.login}
+              </Button>
             </Paper>
           </Box>
         )}

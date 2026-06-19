@@ -7,7 +7,7 @@ export const pl = {
   apiTitle: "API",
   chat: "Chat",
   chatLockedBody:
-    "Dostep do rozmow jest dostepny tylko dla uzytkownikow z aktywna sesja JWT. Uzyj formularza logowania lub rejestracji w panelu bocznym.",
+    "Dostep do rozmow jest dostepny tylko dla uzytkownikow z aktywna sesja JWT. Uzyj strony logowania, aby wejsc lub utworzyc konto.",
   chatLockedTitle: "Zaloguj sie, aby korzystac z chatu",
   conversationRequiresLogin: "wymaga logowania",
   conversations: "Rozmowy",

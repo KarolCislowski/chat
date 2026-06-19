@@ -35,6 +35,7 @@ type AuthMode = "login" | "register";
 type AuthState = {
   account: UserAccount | null;
   error: string | null;
+  hasHydrated: boolean;
   isLoading: boolean;
   mode: AuthMode;
   profile: UserProfile | null;
@@ -42,6 +43,7 @@ type AuthState = {
   login: (apiBaseUrl: string, email: string, password: string) => Promise<void>;
   logout: (apiBaseUrl: string) => Promise<void>;
   register: (apiBaseUrl: string, email: string, password: string, displayName: string) => Promise<void>;
+  setHasHydrated: (hasHydrated: boolean) => void;
   setMode: (mode: AuthMode) => void;
   updateLanguagePreference: (apiBaseUrl: string, language: UiLanguage) => Promise<void>;
 };
@@ -69,6 +71,7 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       account: null,
       error: null,
+      hasHydrated: false,
       isLoading: false,
       mode: "login",
       profile: null,
@@ -119,6 +122,7 @@ export const useAuthStore = create<AuthState>()(
           set({ error: error instanceof Error ? error.message : "Registration failed", isLoading: false });
         }
       },
+      setHasHydrated: (hasHydrated) => set({ hasHydrated }),
       setMode: (mode) => set({ error: null, mode }),
       updateLanguagePreference: async (apiBaseUrl, language) => {
         const accessToken = get().tokens?.accessToken;
@@ -151,6 +155,9 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "chat-auth",
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
       partialize: (state) => ({
         account: state.account,
         profile: state.profile,
