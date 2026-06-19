@@ -11,6 +11,11 @@ export type ChatConnectionStatus = "connected" | "connecting" | "disconnected";
 export type Message = {
   _id: string;
   senderId: string;
+  sender: {
+    id: string;
+    displayName: string;
+    avatarUrl: string | null;
+  } | null;
   channelType: "global" | "guild" | "whisper";
   guildId: string | null;
   recipientId: string | null;

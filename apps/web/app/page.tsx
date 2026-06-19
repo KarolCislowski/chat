@@ -342,7 +342,7 @@ export default function Home() {
             >
               {messages.map((message) => {
                 const isOwnMessage = message.senderId === account?.id;
-                const author = isOwnMessage ? profile?.displayName ?? t.profile : message.senderId;
+                const author = isOwnMessage ? profile?.displayName ?? t.profile : message.sender?.displayName ?? message.senderId;
                 const messageTime = new Intl.DateTimeFormat(language, {
                   hour: "2-digit",
                   minute: "2-digit",

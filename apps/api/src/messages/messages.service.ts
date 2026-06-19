@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
+import { UserProfile, UserProfileDocument } from "../users/schemas/user-profile.schema";
 import { Message, MessageDocument } from "./schemas/message.schema";
 
 type CreateGlobalMessageInput = {
@@ -10,7 +11,10 @@ type CreateGlobalMessageInput = {
 
 @Injectable()
 export class MessagesService {
-  constructor(@InjectModel(Message.name) private readonly messageModel: Model<MessageDocument>) {}
+  constructor(
+    @InjectModel(Message.name) private readonly messageModel: Model<MessageDocument>,
+    @InjectModel(UserProfile.name) private readonly profileModel: Model<UserProfileDocument>,
+  ) {}
 
   async createGlobalMessage(input: CreateGlobalMessageInput) {
     const content = input.content.trim();
@@ -28,20 +32,39 @@ export class MessagesService {
       senderId: new Types.ObjectId(input.senderId),
     });
 
-    return this.toMessageResponse(message);
+    return this.toMessageResponse(message, await this.getSenderByAccountId(message.senderId));
   }
 
   async getGlobalMessages(limit = 50) {
     const safeLimit = Math.min(Math.max(limit, 1), 100);
     const messages = await this.messageModel.find({ channelType: "global", deletedAt: null }).sort({ createdAt: -1 }).limit(safeLimit).exec();
 
-    return messages.reverse().map((message) => this.toMessageResponse(message));
+    const orderedMessages = messages.reverse();
+    const senderIds = [...new Set(orderedMessages.map((message) => message.senderId.toString()))];
+    const profiles = await this.profileModel.find({ accountId: { $in: senderIds } }).exec();
+    const sendersByAccountId = new Map(profiles.map((profile) => [profile.accountId.toString(), this.toSenderResponse(profile)]));
+
+    return orderedMessages.map((message) => this.toMessageResponse(message, sendersByAccountId.get(message.senderId.toString()) ?? null));
   }
 
-  toMessageResponse(message: MessageDocument) {
+  private async getSenderByAccountId(accountId: Types.ObjectId) {
+    const profile = await this.profileModel.findOne({ accountId }).exec();
+    return profile ? this.toSenderResponse(profile) : null;
+  }
+
+  private toSenderResponse(profile: UserProfileDocument) {
+    return {
+      id: profile.accountId.toString(),
+      displayName: profile.displayName,
+      avatarUrl: profile.avatarUrl,
+    };
+  }
+
+  private toMessageResponse(message: MessageDocument, sender: ReturnType<MessagesService["toSenderResponse"]> | null) {
     return {
       _id: message.id,
       senderId: message.senderId.toString(),
+      sender,
       channelType: message.channelType,
       guildId: message.guildId?.toString() ?? null,
       recipientId: message.recipientId?.toString() ?? null,
