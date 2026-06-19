@@ -1,61 +1,126 @@
 import { create } from "zustand";
+import { io, Socket } from "socket.io-client";
 
 export type ApiHealth = {
   status: string;
   database: string;
 };
 
+export type ChatConnectionStatus = "connected" | "connecting" | "disconnected";
+
 export type Message = {
-  id: number;
-  author: "Ty" | "System";
-  text: string;
-  time: string;
+  _id: string;
+  senderId: string;
+  channelType: "global" | "guild" | "whisper";
+  guildId: string | null;
+  recipientId: string | null;
+  conversationId: string | null;
+  content: string;
+  createdAt: string;
+  editedAt: string | null;
+  deletedAt: string | null;
 };
 
 type ChatState = {
+  connectionError: string | null;
+  connectionStatus: ChatConnectionStatus;
   draft: string;
   health: ApiHealth | null;
   healthError: string | null;
   messages: Message[];
-  addMessage: (text: string) => void;
+  connectRealtime: (apiBaseUrl: string, accessToken: string) => void;
+  disconnectRealtime: () => void;
+  loadGlobalMessages: (apiBaseUrl: string, accessToken: string) => Promise<void>;
   loadHealth: (apiBaseUrl: string) => Promise<void>;
+  sendGlobalMessage: (content: string) => void;
   setDraft: (draft: string) => void;
 };
 
-const initialMessages: Message[] = [
-  {
-    id: 1,
-    author: "System",
-    text: "Frontend jest gotowy. Podlacz endpoint wiadomosci w API, gdy model danych bedzie gotowy.",
-    time: "teraz",
-  },
-];
+let socket: Socket | null = null;
 
-function formatMessageTime() {
-  return new Intl.DateTimeFormat("pl-PL", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date());
+function upsertMessage(messages: Message[], message: Message) {
+  if (messages.some((existingMessage) => existingMessage._id === message._id)) {
+    return messages;
+  }
+
+  return [...messages, message].sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
 }
 
-export const useChatStore = create<ChatState>((set) => ({
+async function getErrorMessage(response: Response) {
+  const errorPayload = (await response.json().catch(() => null)) as { message?: string | string[] } | null;
+  const message = Array.isArray(errorPayload?.message) ? errorPayload.message.join(", ") : errorPayload?.message;
+
+  return message ?? `Request failed with ${response.status}`;
+}
+
+export const useChatStore = create<ChatState>((set, get) => ({
+  connectionError: null,
+  connectionStatus: "disconnected",
   draft: "",
   health: null,
   healthError: null,
-  messages: initialMessages,
-  addMessage: (text) =>
-    set((state) => ({
-      draft: "",
-      messages: [
-        ...state.messages,
-        {
-          id: Date.now(),
-          author: "Ty",
-          text,
-          time: formatMessageTime(),
+  messages: [],
+  connectRealtime: (apiBaseUrl, accessToken) => {
+    if (socket?.connected) {
+      return;
+    }
+
+    socket?.disconnect();
+    set({ connectionError: null, connectionStatus: "connecting" });
+
+    socket = io(`${apiBaseUrl}/chat`, {
+      auth: {
+        token: accessToken,
+      },
+      transports: ["websocket"],
+    });
+
+    socket.on("connect", () => {
+      set({ connectionError: null, connectionStatus: "connected" });
+    });
+
+    socket.on("disconnect", () => {
+      set({ connectionStatus: "disconnected" });
+    });
+
+    socket.on("connect_error", (error) => {
+      set({ connectionError: error.message, connectionStatus: "disconnected" });
+    });
+
+    socket.on("chat:error", (payload: { message?: string }) => {
+      set({ connectionError: payload.message ?? "Chat connection error." });
+    });
+
+    socket.on("message:created", (message: Message) => {
+      set((state) => ({
+        messages: upsertMessage(state.messages, message),
+      }));
+    });
+  },
+  disconnectRealtime: () => {
+    socket?.disconnect();
+    socket = null;
+    set({ connectionError: null, connectionStatus: "disconnected", draft: "", messages: [] });
+  },
+  loadGlobalMessages: async (apiBaseUrl, accessToken) => {
+    try {
+      const response = await fetch(`${apiBaseUrl}/messages/global`, {
+        cache: "no-store",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
         },
-      ],
-    })),
+      });
+
+      if (!response.ok) {
+        throw new Error(await getErrorMessage(response));
+      }
+
+      const messages = (await response.json()) as Message[];
+      set({ connectionError: null, messages });
+    } catch (error) {
+      set({ connectionError: error instanceof Error ? error.message : "Messages unavailable" });
+    }
+  },
   loadHealth: async (apiBaseUrl) => {
     try {
       const response = await fetch(`${apiBaseUrl}/health`, {
@@ -78,6 +143,19 @@ export const useChatStore = create<ChatState>((set) => ({
         healthError: error instanceof Error ? error.message : "API unavailable",
       });
     }
+  },
+  sendGlobalMessage: (content) => {
+    const text = content.trim();
+
+    if (!text || !socket?.connected) {
+      if (text) {
+        set({ connectionError: "Chat socket is not connected." });
+      }
+      return;
+    }
+
+    socket.emit("message:create", { content: text });
+    set({ connectionError: null, draft: "" });
   },
   setDraft: (draft) => set({ draft }),
 }));

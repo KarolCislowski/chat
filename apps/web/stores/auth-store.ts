@@ -19,7 +19,9 @@ export type UserProfile = {
   language: UiLanguage;
 };
 
-type AuthTokens = {
+export type OnlineStatus = UserProfile["onlineStatus"];
+
+export type AuthTokens = {
   accessToken: string;
   refreshToken: string;
 };
@@ -32,6 +34,10 @@ type AuthResponse = {
 
 type AuthMode = "login" | "register";
 
+export type ProfileUpdateInput = Partial<
+  Pick<UserProfile, "avatarUrl" | "displayName" | "language" | "onlineStatus" | "statusMessage">
+>;
+
 type AuthState = {
   account: UserAccount | null;
   error: string | null;
@@ -40,13 +46,22 @@ type AuthState = {
   mode: AuthMode;
   profile: UserProfile | null;
   tokens: AuthTokens | null;
+  getFreshAccessToken: (apiBaseUrl: string) => Promise<string | null>;
   login: (apiBaseUrl: string, email: string, password: string) => Promise<void>;
   logout: (apiBaseUrl: string) => Promise<void>;
   register: (apiBaseUrl: string, email: string, password: string, displayName: string) => Promise<void>;
   setHasHydrated: (hasHydrated: boolean) => void;
   setMode: (mode: AuthMode) => void;
   updateLanguagePreference: (apiBaseUrl: string, language: UiLanguage) => Promise<void>;
+  updateProfile: (apiBaseUrl: string, profileUpdate: ProfileUpdateInput) => Promise<boolean>;
 };
+
+async function getErrorMessage(response: Response) {
+  const errorPayload = (await response.json().catch(() => null)) as { message?: string | string[] } | null;
+  const message = Array.isArray(errorPayload?.message) ? errorPayload.message.join(", ") : errorPayload?.message;
+
+  return message ?? `Request failed with ${response.status}`;
+}
 
 async function requestAuth(apiBaseUrl: string, path: string, body: unknown): Promise<AuthResponse> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
@@ -58,12 +73,35 @@ async function requestAuth(apiBaseUrl: string, path: string, body: unknown): Pro
   });
 
   if (!response.ok) {
-    const errorPayload = (await response.json().catch(() => null)) as { message?: string | string[] } | null;
-    const message = Array.isArray(errorPayload?.message) ? errorPayload.message.join(", ") : errorPayload?.message;
-    throw new Error(message ?? `Request failed with ${response.status}`);
+    throw new Error(await getErrorMessage(response));
   }
 
   return response.json() as Promise<AuthResponse>;
+}
+
+function getTokenExpiration(accessToken: string) {
+  const [, payload] = accessToken.split(".");
+
+  if (!payload) {
+    return null;
+  }
+
+  try {
+    const decodedPayload = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/"))) as { exp?: number };
+    return typeof decodedPayload.exp === "number" ? decodedPayload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+function shouldRefreshAccessToken(accessToken: string) {
+  const expiresAt = getTokenExpiration(accessToken);
+
+  if (!expiresAt) {
+    return true;
+  }
+
+  return expiresAt - Date.now() < 30_000;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -76,6 +114,36 @@ export const useAuthStore = create<AuthState>()(
       mode: "login",
       profile: null,
       tokens: null,
+      getFreshAccessToken: async (apiBaseUrl) => {
+        const tokens = get().tokens;
+
+        if (!tokens) {
+          return null;
+        }
+
+        if (!shouldRefreshAccessToken(tokens.accessToken)) {
+          return tokens.accessToken;
+        }
+
+        try {
+          const response = await requestAuth(apiBaseUrl, "/auth/refresh", { refreshToken: tokens.refreshToken });
+          set({
+            account: response.account,
+            error: null,
+            profile: response.profile,
+            tokens: response.tokens,
+          });
+          return response.tokens.accessToken;
+        } catch (error) {
+          set({
+            account: null,
+            error: error instanceof Error ? error.message : "Session refresh failed",
+            profile: null,
+            tokens: null,
+          });
+          return null;
+        }
+      },
       login: async (apiBaseUrl, email, password) => {
         set({ error: null, isLoading: true });
 
@@ -125,32 +193,39 @@ export const useAuthStore = create<AuthState>()(
       setHasHydrated: (hasHydrated) => set({ hasHydrated }),
       setMode: (mode) => set({ error: null, mode }),
       updateLanguagePreference: async (apiBaseUrl, language) => {
+        await get().updateProfile(apiBaseUrl, { language });
+      },
+      updateProfile: async (apiBaseUrl, profileUpdate) => {
         const accessToken = get().tokens?.accessToken;
 
-        set((state) => ({
-          profile: state.profile ? { ...state.profile, language } : state.profile,
-        }));
-
         if (!accessToken) {
-          return;
+          set({ error: "Profile update requires login." });
+          return false;
         }
 
-        const response = await fetch(`${apiBaseUrl}/users/me/profile`, {
-          body: JSON.stringify({ language }),
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          method: "PATCH",
-        });
+        set({ error: null, isLoading: true });
 
-        if (!response.ok) {
-          set({ error: `Language preference update failed with ${response.status}` });
-          return;
+        try {
+          const response = await fetch(`${apiBaseUrl}/users/me/profile`, {
+            body: JSON.stringify(profileUpdate),
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+            method: "PATCH",
+          });
+
+          if (!response.ok) {
+            throw new Error(await getErrorMessage(response));
+          }
+
+          const profile = (await response.json()) as UserProfile;
+          set({ error: null, isLoading: false, profile });
+          return true;
+        } catch (error) {
+          set({ error: error instanceof Error ? error.message : "Profile update failed", isLoading: false });
+          return false;
         }
-
-        const profile = (await response.json()) as UserProfile;
-        set({ error: null, profile });
       },
     }),
     {

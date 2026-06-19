@@ -9,7 +9,7 @@ export class UpdateProfileDto {
 
   @IsOptional()
   @IsUrl({ require_protocol: true })
-  avatarUrl?: string;
+  avatarUrl?: string | null;
 
   @IsOptional()
   @IsString()

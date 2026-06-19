@@ -2,6 +2,8 @@ import { Body, Controller, Get, Patch, Req, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { AuthenticatedRequest } from "../auth/types/authenticated-request";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
+import { UserAccountDocument } from "./schemas/user-account.schema";
+import { UserProfileDocument } from "./schemas/user-profile.schema";
 import { UsersService } from "./users.service";
 
 @UseGuards(JwtAuthGuard)
@@ -14,26 +16,36 @@ export class UsersController {
     const { account, profile } = await this.usersService.getAccountWithProfile(request.user.accountId);
 
     return {
-      account: {
-        id: account.id,
-        email: account.email,
-        role: account.role,
-        createdAt: account.createdAt,
-      },
-      profile: {
-        id: profile.id,
-        accountId: profile.accountId.toString(),
-        displayName: profile.displayName,
-        avatarUrl: profile.avatarUrl,
-        statusMessage: profile.statusMessage,
-        onlineStatus: profile.onlineStatus,
-        language: profile.language,
-      },
+      account: this.toAccountResponse(account),
+      profile: this.toProfileResponse(profile),
     };
   }
 
   @Patch("me/profile")
-  updateMyProfile(@Req() request: AuthenticatedRequest, @Body() dto: UpdateProfileDto) {
-    return this.usersService.updateProfile(request.user.accountId, dto);
+  async updateMyProfile(@Req() request: AuthenticatedRequest, @Body() dto: UpdateProfileDto) {
+    const profile = await this.usersService.updateProfile(request.user.accountId, dto);
+
+    return this.toProfileResponse(profile);
+  }
+
+  private toAccountResponse(account: UserAccountDocument) {
+    return {
+      id: account.id,
+      email: account.email,
+      role: account.role,
+      createdAt: account.createdAt,
+    };
+  }
+
+  private toProfileResponse(profile: UserProfileDocument) {
+    return {
+      id: profile.id,
+      accountId: profile.accountId.toString(),
+      displayName: profile.displayName,
+      avatarUrl: profile.avatarUrl,
+      statusMessage: profile.statusMessage,
+      onlineStatus: profile.onlineStatus,
+      language: profile.language,
+    };
   }
 }

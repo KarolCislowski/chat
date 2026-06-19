@@ -30,12 +30,19 @@ export default function Home() {
   const router = useRouter();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";
   const draft = useChatStore((state) => state.draft);
+  const connectionError = useChatStore((state) => state.connectionError);
+  const connectionStatus = useChatStore((state) => state.connectionStatus);
   const health = useChatStore((state) => state.health);
   const healthError = useChatStore((state) => state.healthError);
   const messages = useChatStore((state) => state.messages);
-  const addMessage = useChatStore((state) => state.addMessage);
+  const connectRealtime = useChatStore((state) => state.connectRealtime);
+  const disconnectRealtime = useChatStore((state) => state.disconnectRealtime);
+  const loadGlobalMessages = useChatStore((state) => state.loadGlobalMessages);
   const loadHealth = useChatStore((state) => state.loadHealth);
+  const sendGlobalMessage = useChatStore((state) => state.sendGlobalMessage);
   const setDraft = useChatStore((state) => state.setDraft);
+  const account = useAuthStore((state) => state.account);
+  const getFreshAccessToken = useAuthStore((state) => state.getFreshAccessToken);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const logout = useAuthStore((state) => state.logout);
   const profile = useAuthStore((state) => state.profile);
@@ -76,6 +83,34 @@ export default function Home() {
     }
   }, [hasHydrated, isAuthenticated, router]);
 
+  useEffect(() => {
+    let isCancelled = false;
+
+    if (!isAuthenticated || !tokens?.accessToken) {
+      disconnectRealtime();
+      return;
+    }
+
+    async function startChat() {
+      const accessToken = await getFreshAccessToken(apiBaseUrl);
+
+      if (isCancelled || !accessToken) {
+        disconnectRealtime();
+        return;
+      }
+
+      void loadGlobalMessages(apiBaseUrl, accessToken);
+      connectRealtime(apiBaseUrl, accessToken);
+    }
+
+    void startChat();
+
+    return () => {
+      isCancelled = true;
+      disconnectRealtime();
+    };
+  }, [apiBaseUrl, connectRealtime, disconnectRealtime, getFreshAccessToken, isAuthenticated, loadGlobalMessages, tokens?.accessToken]);
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -84,7 +119,7 @@ export default function Home() {
       return;
     }
 
-    addMessage(text);
+    sendGlobalMessage(text);
   }
 
   function handleLanguageChange(event: SelectChangeEvent<UiLanguage>) {
@@ -170,6 +205,9 @@ export default function Home() {
                 <Typography sx={{ fontWeight: 700 }}>{profile.displayName}</Typography>
                 <Typography sx={{ color: "#b7c3cf", fontSize: "0.85rem" }}>{profile.onlineStatus}</Typography>
               </Box>
+              <Button color="inherit" component={Link} href="/profile" type="button" variant="contained">
+                {t.profile}
+              </Button>
               <Button color="inherit" onClick={() => void logout(apiBaseUrl)} type="button" variant="outlined">
                 {t.logout}
               </Button>
@@ -210,7 +248,7 @@ export default function Home() {
             }}
           >
             <ListItemText
-              primary={t.development}
+              primary={t.globalChat}
               secondary={isAuthenticated ? t.local : t.conversationRequiresLogin}
               slotProps={{
                 primary: { sx: { fontWeight: 700 } },
@@ -243,7 +281,7 @@ export default function Home() {
       <Box
         component="section"
         id="current"
-        aria-label={t.developmentChat}
+        aria-label={t.globalChat}
         sx={{
           display: "grid",
           gridTemplateRows: "auto minmax(0, 1fr) auto",
@@ -269,20 +307,24 @@ export default function Home() {
               {t.workspace}
             </Typography>
             <Typography component="h2" sx={{ fontSize: "1.45rem", fontWeight: 700, lineHeight: 1.2 }}>
-              {t.developmentChat}
+              {t.globalChat}
             </Typography>
           </Box>
 
-          <Chip
-            color={isApiConnected ? "primary" : "warning"}
-            label={apiStatus}
-            sx={{
-              alignSelf: { xs: "flex-start", md: "center" },
-              fontWeight: 700,
-              maxWidth: "100%",
-            }}
-            variant="outlined"
-          />
+          <Box sx={{ alignItems: { xs: "flex-start", md: "center" }, display: "flex", flexWrap: "wrap", gap: 1 }}>
+            <Chip
+              color={connectionStatus === "connected" ? "primary" : "warning"}
+              label={connectionStatus}
+              sx={{ fontWeight: 700, maxWidth: "100%" }}
+              variant="outlined"
+            />
+            <Chip
+              color={isApiConnected ? "primary" : "warning"}
+              label={apiStatus}
+              sx={{ fontWeight: 700, maxWidth: "100%" }}
+              variant="outlined"
+            />
+          </Box>
         </Box>
 
         {isAuthenticated ? (
@@ -299,13 +341,18 @@ export default function Home() {
               }}
             >
               {messages.map((message) => {
-                const isOwnMessage = message.author === "Ty";
+                const isOwnMessage = message.senderId === account?.id;
+                const author = isOwnMessage ? profile?.displayName ?? t.profile : message.senderId;
+                const messageTime = new Intl.DateTimeFormat(language, {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }).format(new Date(message.createdAt));
 
                 return (
                   <Paper
                     component="article"
                     elevation={isOwnMessage ? 0 : 3}
-                    key={message.id}
+                    key={message._id}
                     sx={{
                       alignSelf: isOwnMessage ? "flex-end" : "flex-start",
                       bgcolor: isOwnMessage ? "#eef8f5" : "background.paper",
@@ -327,16 +374,22 @@ export default function Home() {
                       }}
                     >
                       <Typography component="span" sx={{ fontSize: "inherit" }}>
-                        {message.author}
+                        {author}
                       </Typography>
                       <Typography component="time" sx={{ fontSize: "inherit" }}>
-                        {message.time}
+                        {messageTime}
                       </Typography>
                     </Box>
-                    <Typography sx={{ lineHeight: 1.55 }}>{message.text}</Typography>
+                    <Typography sx={{ lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{message.content}</Typography>
                   </Paper>
                 );
               })}
+
+              {connectionError ? (
+                <Alert severity="warning" variant="outlined">
+                  {connectionError}
+                </Alert>
+              ) : null}
 
               {healthError ? (
                 <Alert severity="warning" variant="outlined">
@@ -363,7 +416,7 @@ export default function Home() {
                   placeholder={t.typeMessage}
                   value={draft}
                 />
-                <Button sx={{ minWidth: { sm: 120 } }} type="submit" variant="contained">
+                <Button disabled={connectionStatus !== "connected"} sx={{ minWidth: { sm: 120 } }} type="submit" variant="contained">
                   {t.send}
                 </Button>
               </Box>
