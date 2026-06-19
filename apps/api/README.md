@@ -21,3 +21,21 @@ docker compose up -d
 ```
 
 The API is available at `http://localhost:5000`, and the health endpoint is `http://localhost:5000/health`.
+
+## Authentication
+
+User accounts and user profiles are stored separately:
+
+- `UserAccount`: email, password hash, refresh token hashes, role, creation date
+- `UserProfile`: account id, display name, avatar URL, status message, online status
+
+Available endpoints:
+
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/refresh`
+- `POST /auth/logout`
+- `GET /users/me`
+- `PATCH /users/me/profile`
+
+Protected endpoints require an `Authorization: Bearer <accessToken>` header.

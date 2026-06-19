@@ -24,6 +24,11 @@ services:
     environment:
       PORT: 5000
       MONGODB_URI: mongodb://chat_api:chat_api_password@mongodb:27017/chat
+      WEB_ORIGIN: http://localhost:3000
+      JWT_SECRET: dev-only-change-me
+      JWT_ACCESS_TOKEN_TTL: 15m
+      JWT_REFRESH_TOKEN_TTL: 7d
+      BCRYPT_ROUNDS: 12
 
   mongodb:
     image: mongo:7.0

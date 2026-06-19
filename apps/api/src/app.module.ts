@@ -3,6 +3,8 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { MongooseModule } from "@nestjs/mongoose";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
+import { AuthModule } from "./auth/auth.module";
+import { UsersModule } from "./users/users.module";
 
 const DEFAULT_MONGODB_URI = "mongodb://chat_api:chat_api_password@localhost:27017/chat";
 
@@ -17,6 +19,8 @@ const DEFAULT_MONGODB_URI = "mongodb://chat_api:chat_api_password@localhost:2701
         uri: configService.get<string>("MONGODB_URI", DEFAULT_MONGODB_URI),
       }),
     }),
+    UsersModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
