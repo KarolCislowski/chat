@@ -38,6 +38,7 @@ export const en = {
   newChat: "New chat",
   noGuilds: "You are not a member of any guild yet.",
   noAvailableGuilds: "No available guilds right now.",
+  noUsers: "No other users yet.",
   offline: "Offline",
   online: "Online",
   onlineStatus: "Online status",
@@ -53,5 +54,7 @@ export const en = {
   send: "Send",
   statusMessage: "Status message",
   typeMessage: "Type a message...",
+  users: "Users",
+  whisper: "Whisper",
   workspace: "Workspace",
 } as const;

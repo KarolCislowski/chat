@@ -20,27 +20,39 @@ import {
   TextField,
   Typography,
   Alert,
+  Badge,
 } from "@mui/material";
 import { languageLabels, UiLanguage } from "../i18n/translations";
 import { useAuthStore } from "../stores/auth-store";
-import { useChatStore } from "../stores/chat-store";
+import { getChatChannelKey, useChatStore } from "../stores/chat-store";
+import { useGuildStore } from "../stores/guild-store";
 import { useLanguageStore } from "../stores/language-store";
+import { useUserStore } from "../stores/user-store";
 
 export default function Home() {
   const router = useRouter();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";
+  const activeChannel = useChatStore((state) => state.activeChannel);
   const draft = useChatStore((state) => state.draft);
   const connectionError = useChatStore((state) => state.connectionError);
   const connectionStatus = useChatStore((state) => state.connectionStatus);
   const health = useChatStore((state) => state.health);
   const healthError = useChatStore((state) => state.healthError);
   const messages = useChatStore((state) => state.messages);
+  const unreadByChannel = useChatStore((state) => state.unreadByChannel);
   const connectRealtime = useChatStore((state) => state.connectRealtime);
   const disconnectRealtime = useChatStore((state) => state.disconnectRealtime);
-  const loadGlobalMessages = useChatStore((state) => state.loadGlobalMessages);
   const loadHealth = useChatStore((state) => state.loadHealth);
-  const sendGlobalMessage = useChatStore((state) => state.sendGlobalMessage);
+  const loadMessages = useChatStore((state) => state.loadMessages);
+  const sendMessage = useChatStore((state) => state.sendMessage);
+  const setActiveChannel = useChatStore((state) => state.setActiveChannel);
+  const setCurrentAccountId = useChatStore((state) => state.setCurrentAccountId);
   const setDraft = useChatStore((state) => state.setDraft);
+  const guilds = useGuildStore((state) => state.guilds);
+  const loadGuilds = useGuildStore((state) => state.loadGuilds);
+  const users = useUserStore((state) => state.users);
+  const usersError = useUserStore((state) => state.error);
+  const loadUsers = useUserStore((state) => state.loadUsers);
   const account = useAuthStore((state) => state.account);
   const getFreshAccessToken = useAuthStore((state) => state.getFreshAccessToken);
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
@@ -76,12 +88,18 @@ export default function Home() {
 
   const isApiConnected = health?.status === "ok" && health.database === "connected";
   const isAuthenticated = Boolean(profile && tokens?.accessToken);
+  const activeGuild = activeChannel.type === "guild" ? guilds.find((guild) => guild._id === activeChannel.guildId) : null;
+  const activeChannelTitle = activeChannel.type === "whisper" ? activeChannel.recipientDisplayName : activeGuild?.name ?? t.globalChat;
 
   useEffect(() => {
     if (hasHydrated && !isAuthenticated) {
       router.replace("/auth");
     }
   }, [hasHydrated, isAuthenticated, router]);
+
+  useEffect(() => {
+    setCurrentAccountId(account?.id ?? null);
+  }, [account?.id, setCurrentAccountId]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -99,7 +117,8 @@ export default function Home() {
         return;
       }
 
-      void loadGlobalMessages(apiBaseUrl, accessToken);
+      void loadGuilds(apiBaseUrl, accessToken);
+      void loadUsers(apiBaseUrl, accessToken);
       connectRealtime(apiBaseUrl, accessToken);
     }
 
@@ -109,7 +128,31 @@ export default function Home() {
       isCancelled = true;
       disconnectRealtime();
     };
-  }, [apiBaseUrl, connectRealtime, disconnectRealtime, getFreshAccessToken, isAuthenticated, loadGlobalMessages, tokens?.accessToken]);
+  }, [apiBaseUrl, connectRealtime, disconnectRealtime, getFreshAccessToken, isAuthenticated, loadGuilds, loadUsers, tokens?.accessToken]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    if (!isAuthenticated || !tokens?.accessToken) {
+      return;
+    }
+
+    async function loadActiveChannelMessages() {
+      const accessToken = await getFreshAccessToken(apiBaseUrl);
+
+      if (isCancelled || !accessToken) {
+        return;
+      }
+
+      void loadMessages(apiBaseUrl, accessToken);
+    }
+
+    void loadActiveChannelMessages();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [apiBaseUrl, activeChannel, getFreshAccessToken, isAuthenticated, loadMessages, tokens?.accessToken]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -119,7 +162,30 @@ export default function Home() {
       return;
     }
 
-    sendGlobalMessage(text);
+    sendMessage(text);
+  }
+
+  function handleChannelChange(channel: Parameters<typeof setActiveChannel>[0]) {
+    setActiveChannel(channel);
+  }
+
+  function renderChannelPrimary(label: string, channel: Parameters<typeof setActiveChannel>[0]) {
+    const unreadCount = unreadByChannel[getChatChannelKey(channel)] ?? 0;
+
+    return (
+      <Box component="span" sx={{ alignItems: "center", columnGap: 1.75, display: "flex", justifyContent: "space-between", minWidth: 0 }}>
+        <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {label}
+        </Box>
+        {unreadCount > 0 ? (
+          <Badge
+            badgeContent={unreadCount > 99 ? "99+" : unreadCount}
+            color="primary"
+            sx={{ flex: "0 0 auto", ml: 1, mr: 1 }}
+          />
+        ) : null}
+      </Box>
+    );
   }
 
   function handleLanguageChange(event: SelectChangeEvent<UiLanguage>) {
@@ -232,10 +298,9 @@ export default function Home() {
 
         <List aria-label={t.conversations} disablePadding sx={{ display: "grid", gap: 1.25 }}>
           <ListItemButton
-            component="a"
             disabled={!isAuthenticated}
-            href="#current"
-            selected={isAuthenticated}
+            onClick={() => handleChannelChange({ type: "global" })}
+            selected={isAuthenticated && activeChannel.type === "global"}
             sx={{
               border: "1px solid rgba(255, 255, 255, 0.1)",
               borderRadius: 1,
@@ -251,7 +316,7 @@ export default function Home() {
             }}
           >
             <ListItemText
-              primary={t.globalChat}
+              primary={renderChannelPrimary(t.globalChat, { type: "global" })}
               secondary={isAuthenticated ? t.local : t.conversationRequiresLogin}
               slotProps={{
                 primary: { sx: { fontWeight: 700 } },
@@ -259,6 +324,86 @@ export default function Home() {
               }}
             />
           </ListItemButton>
+
+          {guilds.map((guild) => (
+            <ListItemButton
+              disabled={!isAuthenticated}
+              key={guild._id}
+              onClick={() => handleChannelChange({ guildId: guild._id, type: "guild" })}
+              selected={activeChannel.type === "guild" && activeChannel.guildId === guild._id}
+              sx={{
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: 1,
+                color: "inherit",
+                display: "grid",
+                gap: 0.5,
+                "&.Mui-selected": {
+                  bgcolor: "rgba(255, 255, 255, 0.08)",
+                },
+                "&.Mui-selected:hover": {
+                  bgcolor: "rgba(255, 255, 255, 0.12)",
+                },
+              }}
+            >
+              <ListItemText
+                primary={renderChannelPrimary(guild.name, { guildId: guild._id, type: "guild" })}
+                secondary={t.guilds}
+                slotProps={{
+                  primary: { sx: { fontWeight: 700 } },
+                  secondary: { sx: { color: "#b7c3cf", fontSize: "0.85rem" } },
+                }}
+              />
+            </ListItemButton>
+          ))}
+
+          <Typography color="#8aa3b5" sx={{ fontSize: "0.75rem", fontWeight: 700, pt: 1, textTransform: "uppercase" }}>
+            {t.whisper}
+          </Typography>
+
+          {users.length > 0 ? (
+            users.map((user) => (
+              <ListItemButton
+                disabled={!isAuthenticated}
+                key={user.accountId}
+                onClick={() =>
+                  handleChannelChange({
+                    recipientDisplayName: user.displayName,
+                    recipientId: user.accountId,
+                    type: "whisper",
+                  })
+                }
+                selected={activeChannel.type === "whisper" && activeChannel.recipientId === user.accountId}
+                sx={{
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  borderRadius: 1,
+                  color: "inherit",
+                  display: "grid",
+                  gap: 0.5,
+                  "&.Mui-selected": {
+                    bgcolor: "rgba(255, 255, 255, 0.08)",
+                  },
+                  "&.Mui-selected:hover": {
+                    bgcolor: "rgba(255, 255, 255, 0.12)",
+                  },
+                }}
+              >
+                <ListItemText
+                  primary={renderChannelPrimary(user.displayName, {
+                    recipientDisplayName: user.displayName,
+                    recipientId: user.accountId,
+                    type: "whisper",
+                  })}
+                  secondary={user.onlineStatus}
+                  slotProps={{
+                    primary: { sx: { fontWeight: 700 } },
+                    secondary: { sx: { color: "#b7c3cf", fontSize: "0.85rem" } },
+                  }}
+                />
+              </ListItemButton>
+            ))
+          ) : (
+            <Typography sx={{ color: "#b7c3cf", fontSize: "0.85rem" }}>{t.noUsers}</Typography>
+          )}
 
           <ListItemButton
             component="a"
@@ -284,7 +429,7 @@ export default function Home() {
       <Box
         component="section"
         id="current"
-        aria-label={t.globalChat}
+        aria-label={activeChannelTitle}
         sx={{
           display: "grid",
           gridTemplateRows: "auto minmax(0, 1fr) auto",
@@ -310,7 +455,7 @@ export default function Home() {
               {t.workspace}
             </Typography>
             <Typography component="h2" sx={{ fontSize: "1.45rem", fontWeight: 700, lineHeight: 1.2 }}>
-              {t.globalChat}
+              {activeChannelTitle}
             </Typography>
           </Box>
 
@@ -410,6 +555,12 @@ export default function Home() {
               {healthError ? (
                 <Alert severity="warning" variant="outlined">
                   {healthError}
+                </Alert>
+              ) : null}
+
+              {usersError ? (
+                <Alert severity="warning" variant="outlined">
+                  {usersError}
                 </Alert>
               ) : null}
             </Box>

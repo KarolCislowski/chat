@@ -66,6 +66,10 @@ export class UsersService {
     return this.profileModel.findOne({ accountId }).exec();
   }
 
+  async listProfiles(accountId: string) {
+    return this.profileModel.find({ accountId: { $ne: new Types.ObjectId(accountId) } }).sort({ displayName: 1 }).exec();
+  }
+
   async getAccountWithProfile(accountId: string): Promise<AccountWithProfile> {
     const [account, profile] = await Promise.all([this.findAccountById(accountId), this.findProfileByAccountId(accountId)]);
 

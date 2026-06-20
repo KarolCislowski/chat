@@ -38,3 +38,4 @@ export class Message {
 export const MessageSchema = SchemaFactory.createForClass(Message);
 
 MessageSchema.index({ channelType: 1, createdAt: -1 });
+MessageSchema.index({ channelType: 1, conversationId: 1, createdAt: -1 });

@@ -52,6 +52,23 @@ export class GuildsService {
       .filter((guild) => guild !== null);
   }
 
+  async getGuildIdsForUser(accountId: string) {
+    const memberships = await this.membershipModel.find({ userId: accountId }).select("guildId").exec();
+    return memberships.map((membership) => membership.guildId.toString());
+  }
+
+  async assertGuildMembership(accountId: string, guildId: string) {
+    if (!Types.ObjectId.isValid(guildId)) {
+      throw new NotFoundException("Guild was not found.");
+    }
+
+    const membership = await this.membershipModel.exists({ guildId, userId: accountId });
+
+    if (!membership) {
+      throw new ForbiddenException("You are not a member of this guild.");
+    }
+  }
+
   async getAvailableGuilds(accountId: string) {
     const [memberships, pendingRequests] = await Promise.all([
       this.membershipModel.find({ userId: accountId }).exec(),

@@ -37,6 +37,13 @@ export class UsersController {
     };
   }
 
+  @Get()
+  async listUsers(@Req() request: AuthenticatedRequest) {
+    const profiles = await this.usersService.listProfiles(request.user.accountId);
+
+    return profiles.map((profile) => this.toProfileResponse(profile));
+  }
+
   private toProfileResponse(profile: UserProfileDocument) {
     return {
       id: profile.id,

@@ -40,6 +40,7 @@ export const sv = {
   newChat: "Ny chatt",
   noGuilds: "Du är inte medlem i något gille än.",
   noAvailableGuilds: "Inga tillgängliga gillen just nu.",
+  noUsers: "Inga andra användare än.",
   offline: "Offline",
   online: "Online",
   onlineStatus: "Onlinestatus",
@@ -55,5 +56,7 @@ export const sv = {
   send: "Skicka",
   statusMessage: "Statusmeddelande",
   typeMessage: "Skriv ett meddelande...",
+  users: "Användare",
+  whisper: "Viskning",
   workspace: "Arbetsyta",
 } satisfies Record<keyof typeof en, string>;

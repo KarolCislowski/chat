@@ -40,6 +40,7 @@ export const pl = {
   newChat: "Nowa rozmowa",
   noGuilds: "Nie nalezysz jeszcze do zadnej gildii.",
   noAvailableGuilds: "Brak dostepnych gildii.",
+  noUsers: "Brak innych uzytkownikow.",
   offline: "Offline",
   online: "Online",
   onlineStatus: "Status online",
@@ -55,5 +56,7 @@ export const pl = {
   send: "Wyslij",
   statusMessage: "Opis statusu",
   typeMessage: "Napisz wiadomosc...",
+  users: "Uzytkownicy",
+  whisper: "Szept",
   workspace: "Workspace",
 } satisfies Record<keyof typeof en, string>;

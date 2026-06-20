@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { JwtModule } from "@nestjs/jwt";
 import { MongooseModule } from "@nestjs/mongoose";
+import { GuildsModule } from "../guilds/guilds.module";
 import { UserProfile, UserProfileSchema } from "../users/schemas/user-profile.schema";
 import { UsersModule } from "../users/users.module";
 import { Message, MessageSchema } from "./schemas/message.schema";
@@ -11,6 +12,7 @@ import { MessagesService } from "./messages.service";
 
 @Module({
   imports: [
+    GuildsModule,
     UsersModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { io, Socket } from "socket.io-client";
+import { useUserStore } from "./user-store";
 
 export type ApiHealth = {
   status: string;
@@ -7,6 +8,19 @@ export type ApiHealth = {
 };
 
 export type ChatConnectionStatus = "connected" | "connecting" | "disconnected";
+export type ChatChannel =
+  | {
+      type: "global";
+    }
+  | {
+      guildId: string;
+      type: "guild";
+    }
+  | {
+      recipientDisplayName: string;
+      recipientId: string;
+      type: "whisper";
+    };
 export type OnlineStatus = "offline" | "online" | "away" | "busy";
 
 export type Message = {
@@ -34,17 +48,22 @@ type PresenceChangedEvent = {
 };
 
 type ChatState = {
+  activeChannel: ChatChannel;
   connectionError: string | null;
   connectionStatus: ChatConnectionStatus;
+  currentAccountId: string | null;
   draft: string;
   health: ApiHealth | null;
   healthError: string | null;
   messages: Message[];
+  unreadByChannel: Record<string, number>;
   connectRealtime: (apiBaseUrl: string, accessToken: string) => void;
   disconnectRealtime: () => void;
-  loadGlobalMessages: (apiBaseUrl: string, accessToken: string) => Promise<void>;
   loadHealth: (apiBaseUrl: string) => Promise<void>;
-  sendGlobalMessage: (content: string) => void;
+  loadMessages: (apiBaseUrl: string, accessToken: string) => Promise<void>;
+  sendMessage: (content: string) => void;
+  setActiveChannel: (channel: ChatChannel) => void;
+  setCurrentAccountId: (accountId: string | null) => void;
   setDraft: (draft: string) => void;
 };
 
@@ -58,6 +77,59 @@ function upsertMessage(messages: Message[], message: Message) {
   return [...messages, message].sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
 }
 
+function isMessageForChannel(message: Message, channel: ChatChannel) {
+  if (channel.type === "global") {
+    return message.channelType === "global";
+  }
+
+  if (channel.type === "whisper") {
+    return message.channelType === "whisper" && (message.senderId === channel.recipientId || message.recipientId === channel.recipientId);
+  }
+
+  return message.channelType === "guild" && message.guildId === channel.guildId;
+}
+
+export function getChatChannelKey(channel: ChatChannel) {
+  if (channel.type === "global") {
+    return "global";
+  }
+
+  if (channel.type === "guild") {
+    return `guild:${channel.guildId}`;
+  }
+
+  return `whisper:${channel.recipientId}`;
+}
+
+function getMessageChannelKey(message: Message, currentAccountId: string | null) {
+  if (message.channelType === "global") {
+    return "global";
+  }
+
+  if (message.channelType === "guild" && message.guildId) {
+    return `guild:${message.guildId}`;
+  }
+
+  if (message.channelType === "whisper") {
+    const otherParticipantId = message.senderId === currentAccountId ? message.recipientId : message.senderId;
+    return otherParticipantId ? `whisper:${otherParticipantId}` : null;
+  }
+
+  return null;
+}
+
+function clearUnread(unreadByChannel: Record<string, number>, channel: ChatChannel) {
+  const channelKey = getChatChannelKey(channel);
+
+  if (!unreadByChannel[channelKey]) {
+    return unreadByChannel;
+  }
+
+  const nextUnreadByChannel = { ...unreadByChannel };
+  delete nextUnreadByChannel[channelKey];
+  return nextUnreadByChannel;
+}
+
 async function getErrorMessage(response: Response) {
   const errorPayload = (await response.json().catch(() => null)) as { message?: string | string[] } | null;
   const message = Array.isArray(errorPayload?.message) ? errorPayload.message.join(", ") : errorPayload?.message;
@@ -66,12 +138,15 @@ async function getErrorMessage(response: Response) {
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
+  activeChannel: { type: "global" },
   connectionError: null,
   connectionStatus: "disconnected",
+  currentAccountId: null,
   draft: "",
   health: null,
   healthError: null,
   messages: [],
+  unreadByChannel: {},
   connectRealtime: (apiBaseUrl, accessToken) => {
     if (socket?.connected) {
       return;
@@ -104,12 +179,28 @@ export const useChatStore = create<ChatState>((set, get) => ({
     });
 
     socket.on("message:created", (message: Message) => {
-      set((state) => ({
-        messages: upsertMessage(state.messages, message),
-      }));
+      set((state) => {
+        const isActiveChannelMessage = isMessageForChannel(message, state.activeChannel);
+        const messageChannelKey = getMessageChannelKey(message, state.currentAccountId);
+        const shouldIncrementUnread =
+          Boolean(messageChannelKey) && !isActiveChannelMessage && message.senderId !== state.currentAccountId;
+
+        return {
+          messages: isActiveChannelMessage ? upsertMessage(state.messages, message) : state.messages,
+          unreadByChannel:
+            shouldIncrementUnread && messageChannelKey
+              ? {
+                  ...state.unreadByChannel,
+                  [messageChannelKey]: (state.unreadByChannel[messageChannelKey] ?? 0) + 1,
+                }
+              : state.unreadByChannel,
+        };
+      });
     });
 
     socket.on("presence:changed", (presence: PresenceChangedEvent) => {
+      useUserStore.getState().updateUserPresence(presence.accountId, presence.onlineStatus);
+
       set((state) => ({
         messages: state.messages.map((message) =>
           message.senderId === presence.accountId && message.sender
@@ -128,11 +219,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
   disconnectRealtime: () => {
     socket?.disconnect();
     socket = null;
-    set({ connectionError: null, connectionStatus: "disconnected", draft: "", messages: [] });
+    set({ connectionError: null, connectionStatus: "disconnected", draft: "", messages: [], unreadByChannel: {} });
   },
-  loadGlobalMessages: async (apiBaseUrl, accessToken) => {
+  loadMessages: async (apiBaseUrl, accessToken) => {
+    const channel = get().activeChannel;
+    const path =
+      channel.type === "global"
+        ? "/messages/global"
+        : channel.type === "guild"
+          ? `/messages/guild/${channel.guildId}`
+          : `/messages/whisper/${channel.recipientId}`;
+
     try {
-      const response = await fetch(`${apiBaseUrl}/messages/global`, {
+      const response = await fetch(`${apiBaseUrl}${path}`, {
         cache: "no-store",
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -144,7 +243,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
 
       const messages = (await response.json()) as Message[];
-      set({ connectionError: null, messages });
+      set((state) => ({ connectionError: null, messages, unreadByChannel: clearUnread(state.unreadByChannel, channel) }));
     } catch (error) {
       set({ connectionError: error instanceof Error ? error.message : "Messages unavailable" });
     }
@@ -172,8 +271,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       });
     }
   },
-  sendGlobalMessage: (content) => {
+  sendMessage: (content) => {
     const text = content.trim();
+    const channel = get().activeChannel;
 
     if (!text || !socket?.connected) {
       if (text) {
@@ -182,8 +282,24 @@ export const useChatStore = create<ChatState>((set, get) => ({
       return;
     }
 
-    socket.emit("message:create", { content: text });
+    socket.emit(
+      "message:create",
+      channel.type === "global"
+        ? { channelType: "global", content: text }
+        : channel.type === "guild"
+          ? { channelType: "guild", content: text, guildId: channel.guildId }
+          : { channelType: "whisper", content: text, recipientId: channel.recipientId },
+    );
     set({ connectionError: null, draft: "" });
   },
+  setActiveChannel: (channel) =>
+    set((state) => ({
+      activeChannel: channel,
+      connectionError: null,
+      draft: "",
+      messages: [],
+      unreadByChannel: clearUnread(state.unreadByChannel, channel),
+    })),
+  setCurrentAccountId: (accountId) => set({ currentAccountId: accountId }),
   setDraft: (draft) => set({ draft }),
 }));
