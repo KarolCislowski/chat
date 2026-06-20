@@ -6,6 +6,11 @@ import { UserProfile, UserProfileDocument } from "../users/schemas/user-profile.
 import { UsersService } from "../users/users.service";
 import { Message, MessageDocument } from "./schemas/message.schema";
 
+const GLOBAL_MESSAGE_LIMIT = 200;
+const GUILD_MESSAGE_LIMIT = 200;
+const WHISPER_MESSAGE_LIMIT = 100;
+const MESSAGE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
+
 type CreateGlobalMessageInput = {
   content: string;
   senderId: string;
@@ -35,6 +40,8 @@ export class MessagesService {
       throw new BadRequestException("Message content cannot be empty.");
     }
 
+    await this.pruneMessages({ channelType: "global" }, GLOBAL_MESSAGE_LIMIT);
+
     const message = await this.messageModel.create({
       channelType: "global",
       content,
@@ -56,11 +63,14 @@ export class MessagesService {
       throw new BadRequestException("Message content cannot be empty.");
     }
 
+    const guildId = new Types.ObjectId(input.guildId);
+    await this.pruneMessages({ channelType: "guild", guildId }, GUILD_MESSAGE_LIMIT);
+
     const message = await this.messageModel.create({
       channelType: "guild",
       content,
       conversationId: null,
-      guildId: new Types.ObjectId(input.guildId),
+      guildId,
       recipientId: null,
       senderId: new Types.ObjectId(input.senderId),
     });
@@ -76,6 +86,8 @@ export class MessagesService {
       throw new BadRequestException("Message content cannot be empty.");
     }
 
+    await this.pruneMessages({ channelType: "whisper", conversationId }, WHISPER_MESSAGE_LIMIT);
+
     const message = await this.messageModel.create({
       channelType: "whisper",
       content,
@@ -89,7 +101,9 @@ export class MessagesService {
   }
 
   async getGlobalMessages(limit = 50) {
-    const safeLimit = Math.min(Math.max(limit, 1), 100);
+    await this.deleteExpiredMessages();
+
+    const safeLimit = Math.min(Math.max(limit, 1), GLOBAL_MESSAGE_LIMIT);
     const messages = await this.messageModel.find({ channelType: "global", deletedAt: null }).sort({ createdAt: -1 }).limit(safeLimit).exec();
 
     const orderedMessages = messages.reverse();
@@ -102,8 +116,9 @@ export class MessagesService {
 
   async getGuildMessages(accountId: string, guildId: string, limit = 50) {
     await this.guildsService.assertGuildMembership(accountId, guildId);
+    await this.deleteExpiredMessages();
 
-    const safeLimit = Math.min(Math.max(limit, 1), 100);
+    const safeLimit = Math.min(Math.max(limit, 1), GUILD_MESSAGE_LIMIT);
     const messages = await this.messageModel
       .find({ channelType: "guild", deletedAt: null, guildId })
       .sort({ createdAt: -1 })
@@ -120,7 +135,9 @@ export class MessagesService {
 
   async getWhisperMessages(accountId: string, recipientId: string, limit = 50) {
     const conversationId = await this.getWhisperConversationId(accountId, recipientId);
-    const safeLimit = Math.min(Math.max(limit, 1), 100);
+    await this.deleteExpiredMessages();
+
+    const safeLimit = Math.min(Math.max(limit, 1), WHISPER_MESSAGE_LIMIT);
     const messages = await this.messageModel
       .find({ channelType: "whisper", conversationId, deletedAt: null })
       .sort({ createdAt: -1 })
@@ -178,6 +195,29 @@ export class MessagesService {
     }
 
     return [leftAccountId, rightAccountId].sort().join(":");
+  }
+
+  private async pruneMessages(channelFilter: Record<string, unknown>, messageLimit: number) {
+    await this.deleteExpiredMessages();
+
+    const newestMessagesToKeep = await this.messageModel
+      .find(channelFilter)
+      .sort({ createdAt: -1 })
+      .select("_id")
+      .limit(Math.max(messageLimit - 1, 0))
+      .exec();
+    const idsToKeep = newestMessagesToKeep.map((message) => message._id);
+
+    await this.messageModel
+      .deleteMany({
+        ...channelFilter,
+        _id: { $nin: idsToKeep },
+      })
+      .exec();
+  }
+
+  private async deleteExpiredMessages() {
+    await this.messageModel.deleteMany({ createdAt: { $lt: new Date(Date.now() - MESSAGE_MAX_AGE_MS) } }).exec();
   }
 
   private async getSenderByAccountId(accountId: Types.ObjectId) {

@@ -94,6 +94,44 @@ export default function Home() {
   const isAuthenticated = Boolean(profile && tokens?.accessToken);
   const activeGuild = activeChannel.type === "guild" ? guilds.find((guild) => guild._id === activeChannel.guildId) : null;
   const activeChannelTitle = activeChannel.type === "whisper" ? activeChannel.recipientDisplayName : activeGuild?.name ?? t.globalChat;
+  const channelAppearance = useMemo(() => {
+    if (activeChannel.type === "guild") {
+      return {
+        accent: "#b56a1f",
+        badgeBg: "#fff3df",
+        badgeColor: "#7c3f0b",
+        label: t.guilds,
+        messageBg: "#fff7ed",
+        messageBorder: "rgba(181, 106, 31, 0.32)",
+        pageBg: "#fffaf3",
+        softBg: "rgba(181, 106, 31, 0.08)",
+      };
+    }
+
+    if (activeChannel.type === "whisper") {
+      return {
+        accent: "#2563eb",
+        badgeBg: "#eef4ff",
+        badgeColor: "#1d4ed8",
+        label: t.whisper,
+        messageBg: "#eff6ff",
+        messageBorder: "rgba(37, 99, 235, 0.28)",
+        pageBg: "#f7fbff",
+        softBg: "rgba(37, 99, 235, 0.08)",
+      };
+    }
+
+    return {
+      accent: "#0f766e",
+      badgeBg: "#eafaf5",
+      badgeColor: "#0f5f59",
+      label: t.globalChat,
+      messageBg: "#eef8f5",
+      messageBorder: "rgba(20, 108, 95, 0.24)",
+      pageBg: "#f7fbf9",
+      softBg: "rgba(15, 118, 110, 0.08)",
+    };
+  }, [activeChannel.type, t.globalChat, t.guilds, t.whisper]);
   const manageableGuilds = useMemo(() => guilds.filter((guild) => ["owner", "officer"].includes(guild.membership.role ?? "")), [guilds]);
   const onlineUsers = useMemo(() => users.filter((user) => user.onlineStatus !== "offline"), [users]);
   const [playerMenuAnchor, setPlayerMenuAnchor] = useState<HTMLElement | null>(null);
@@ -502,6 +540,7 @@ export default function Home() {
         id="current"
         aria-label={activeChannelTitle}
         sx={{
+          bgcolor: channelAppearance.pageBg,
           display: "grid",
           gridTemplateRows: "auto minmax(0, 1fr) auto",
           minHeight: { xs: "70vh", md: "100vh" },
@@ -512,22 +551,34 @@ export default function Home() {
         <Box
           component="header"
           sx={{
-            borderBottom: 1,
-            borderColor: "divider",
+            bgcolor: channelAppearance.softBg,
+            borderBottom: 3,
+            borderColor: channelAppearance.accent,
+            borderRadius: 1,
             display: "flex",
             flexDirection: { xs: "column", md: "row" },
             gap: 2.5,
             justifyContent: "space-between",
-            pb: 3,
+            p: 2.25,
           }}
         >
           <Box>
             <Typography color="text.secondary" sx={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase" }}>
               {t.workspace}
             </Typography>
-            <Typography component="h2" sx={{ fontSize: "1.45rem", fontWeight: 700, lineHeight: 1.2 }}>
+            <Typography component="h2" sx={{ color: channelAppearance.accent, fontSize: "1.45rem", fontWeight: 700, lineHeight: 1.2 }}>
               {activeChannelTitle}
             </Typography>
+            <Chip
+              label={channelAppearance.label}
+              size="small"
+              sx={{
+                bgcolor: channelAppearance.badgeBg,
+                color: channelAppearance.badgeColor,
+                fontWeight: 700,
+                mt: 1,
+              }}
+            />
           </Box>
 
           <Box sx={{ alignItems: { xs: "flex-start", md: "center" }, display: "flex", flexWrap: "wrap", gap: 1 }}>
@@ -575,9 +626,9 @@ export default function Home() {
                     key={message._id}
                     sx={{
                       alignSelf: isOwnMessage ? "flex-end" : "flex-start",
-                      bgcolor: isOwnMessage ? "#eef8f5" : "background.paper",
+                      bgcolor: isOwnMessage ? channelAppearance.messageBg : "background.paper",
                       border: 1,
-                      borderColor: isOwnMessage ? "rgba(20, 108, 95, 0.24)" : "divider",
+                      borderColor: isOwnMessage ? channelAppearance.messageBorder : "divider",
                       maxWidth: 680,
                       p: 2,
                       width: "min(680px, 100%)",
@@ -643,7 +694,7 @@ export default function Home() {
             </Box>
 
             <Box component="form" onSubmit={handleSubmit}>
-              <Divider sx={{ mb: 2.5 }} />
+              <Divider sx={{ borderColor: channelAppearance.messageBorder, mb: 2.5 }} />
               <Box
                 sx={{
                   display: "flex",
@@ -658,9 +709,28 @@ export default function Home() {
                   name="message"
                   onChange={(event) => setDraft(event.target.value)}
                   placeholder={t.typeMessage}
+                  sx={{
+                    "& .MuiOutlinedInput-root.Mui-focused fieldset": {
+                      borderColor: channelAppearance.accent,
+                    },
+                    "& .MuiInputLabel-root.Mui-focused": {
+                      color: channelAppearance.accent,
+                    },
+                  }}
                   value={draft}
                 />
-                <Button disabled={connectionStatus !== "connected"} sx={{ minWidth: { sm: 120 } }} type="submit" variant="contained">
+                <Button
+                  disabled={connectionStatus !== "connected"}
+                  sx={{
+                    bgcolor: channelAppearance.accent,
+                    minWidth: { sm: 120 },
+                    "&:hover": {
+                      bgcolor: channelAppearance.badgeColor,
+                    },
+                  }}
+                  type="submit"
+                  variant="contained"
+                >
                   {t.send}
                 </Button>
               </Box>

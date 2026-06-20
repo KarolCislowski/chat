@@ -39,3 +39,4 @@ export const MessageSchema = SchemaFactory.createForClass(Message);
 
 MessageSchema.index({ channelType: 1, createdAt: -1 });
 MessageSchema.index({ channelType: 1, conversationId: 1, createdAt: -1 });
+MessageSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 30 });
