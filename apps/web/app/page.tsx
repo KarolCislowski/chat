@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, MouseEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, MouseEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import {
   Box,
   Avatar,
@@ -315,7 +315,7 @@ export default function Home() {
     );
   }
 
-  function renderRailPrimary(label: string, channel: Parameters<typeof setActiveChannel>[0], icon: string, iconColor = "#60a5fa") {
+  function renderRailPrimary(label: string, channel: Parameters<typeof setActiveChannel>[0], icon: ReactNode, iconColor = "#60a5fa") {
     return (
       <Box component="span" sx={{ alignItems: "center", display: "flex", gap: 1.4, minWidth: 0 }}>
         <Box
@@ -341,6 +341,28 @@ export default function Home() {
     );
   }
 
+  function renderWhisperRailPrimary(user: ChatUser) {
+    return (
+      <Box component="span" sx={{ alignItems: "center", display: "flex", gap: 1.4, minWidth: 0 }}>
+        <Avatar
+          src={resolveAvatarPath(user.avatarUrl)}
+          sx={{
+            bgcolor: "#132337",
+            border: "1px solid rgba(125, 211, 252, 0.42)",
+            flex: "0 0 auto",
+            height: 44,
+            width: 44,
+          }}
+        />
+        {renderChannelPrimary(user.displayName, {
+          recipientDisplayName: user.displayName,
+          recipientId: user.accountId,
+          type: "whisper",
+        })}
+      </Box>
+    );
+  }
+
   function railItemSx(isSelected: boolean, accent = "#60a5fa") {
     return {
       border: "1px solid transparent",
@@ -349,7 +371,7 @@ export default function Home() {
       color: "inherit",
       display: "grid",
       gap: 0.35,
-      minHeight: 54,
+      minHeight: 62,
       px: 1.3,
       py: 0.85,
       transition: "background-color 140ms ease, border-color 140ms ease",
@@ -516,11 +538,7 @@ export default function Home() {
                 <ListItemText
                   primary={
                     <Box component="span" sx={{ alignItems: "center", display: "flex", gap: 1, justifyContent: "space-between", minWidth: 0 }}>
-                      {renderRailPrimary(user.displayName, {
-                        recipientDisplayName: user.displayName,
-                        recipientId: user.accountId,
-                        type: "whisper",
-                      }, "●", "#7dd3fc")}
+                      {renderWhisperRailPrimary(user)}
                       <IconButton
                         aria-label={`${user.displayName} menu`}
                         color="inherit"
@@ -680,73 +698,96 @@ export default function Home() {
                 const isOwnMessage = message.senderId === account?.id;
                 const author = isOwnMessage ? profile?.displayName ?? t.profile : message.sender?.displayName ?? message.senderId;
                 const authorStatus = message.sender?.onlineStatus ?? (isOwnMessage ? profile?.onlineStatus : undefined);
+                const authorAvatar = resolveAvatarPath(isOwnMessage ? profile?.avatarUrl : message.sender?.avatarUrl);
                 const messageTime = new Intl.DateTimeFormat(language, {
                   hour: "2-digit",
                   minute: "2-digit",
                 }).format(new Date(message.createdAt));
 
                 return (
-                  <Paper
-                    component="article"
-                    elevation={isOwnMessage ? 0 : 3}
+                  <Box
                     key={message._id}
                     sx={{
                       alignSelf: isOwnMessage ? "flex-end" : "flex-start",
-                      bgcolor: isOwnMessage ? channelAppearance.messageBg : "rgba(5, 17, 31, 0.82)",
-                      border: 1,
-                      borderColor: isOwnMessage ? channelAppearance.messageBorder : "rgba(148, 163, 184, 0.16)",
-                      color: "#e5edf7",
+                      alignItems: "flex-end",
+                      display: "flex",
+                      flexDirection: isOwnMessage ? "row-reverse" : "row",
+                      gap: 1.35,
                       maxWidth: 680,
-                      p: 2,
                       width: "min(680px, 100%)",
                     }}
-                    variant="outlined"
                   >
-                    <Box
+                    <Avatar
+                      src={authorAvatar}
                       sx={{
-                        color: "text.secondary",
-                        display: "flex",
-                        fontSize: "0.82rem",
-                        justifyContent: "space-between",
-                        mb: 1,
+                        bgcolor: "#132337",
+                        border: `1px solid ${isOwnMessage ? channelAppearance.messageBorder : "rgba(96, 165, 250, 0.3)"}`,
+                        flex: "0 0 auto",
+                        height: { xs: 44, md: 52 },
+                        width: { xs: 44, md: 52 },
                       }}
+                    />
+                    <Paper
+                      component="article"
+                      elevation={isOwnMessage ? 0 : 3}
+                      sx={{
+                        bgcolor: isOwnMessage ? channelAppearance.messageBg : "rgba(5, 17, 31, 0.82)",
+                        border: 1,
+                        borderColor: isOwnMessage ? channelAppearance.messageBorder : "rgba(148, 163, 184, 0.16)",
+                        color: "#e5edf7",
+                        minWidth: 0,
+                        p: 2,
+                        width: "100%",
+                      }}
+                      variant="outlined"
                     >
-                      <Box component="span" sx={{ alignItems: "center", display: "inline-flex", gap: 0.75, minWidth: 0 }}>
-                        {activeChannel.type === "open" ? (
-                          <Chip
-                            label={getMessageChannelLabel(message)}
-                            size="small"
+                      <Box
+                        sx={{
+                          color: "text.secondary",
+                          display: "flex",
+                          fontSize: "0.82rem",
+                          gap: 1,
+                          justifyContent: "space-between",
+                          mb: 1,
+                        }}
+                      >
+                        <Box component="span" sx={{ alignItems: "center", display: "inline-flex", gap: 0.75, minWidth: 0 }}>
+                          {activeChannel.type === "open" ? (
+                            <Chip
+                              label={getMessageChannelLabel(message)}
+                              size="small"
+                              sx={{
+                                bgcolor:
+                                  message.channelType === "guild" ? "#fff3df" : message.channelType === "whisper" ? "#eef4ff" : "#eafaf5",
+                                color: message.channelType === "guild" ? "#7c3f0b" : message.channelType === "whisper" ? "#1d4ed8" : "#0f5f59",
+                                flex: "0 0 auto",
+                                fontSize: "0.68rem",
+                                fontWeight: 700,
+                                height: 22,
+                              }}
+                            />
+                          ) : null}
+                          <Box
+                            component="span"
                             sx={{
-                              bgcolor:
-                                message.channelType === "guild" ? "#fff3df" : message.channelType === "whisper" ? "#eef4ff" : "#eafaf5",
-                              color: message.channelType === "guild" ? "#7c3f0b" : message.channelType === "whisper" ? "#1d4ed8" : "#0f5f59",
+                              bgcolor: authorStatus === "online" ? "primary.main" : "text.disabled",
+                              borderRadius: "50%",
                               flex: "0 0 auto",
-                              fontSize: "0.68rem",
-                              fontWeight: 700,
-                              height: 22,
+                              height: 8,
+                              width: 8,
                             }}
                           />
-                        ) : null}
-                        <Box
-                          component="span"
-                          sx={{
-                            bgcolor: authorStatus === "online" ? "primary.main" : "text.disabled",
-                            borderRadius: "50%",
-                            flex: "0 0 auto",
-                            height: 8,
-                            width: 8,
-                          }}
-                        />
-                        <Typography component="span" sx={{ fontSize: "inherit", overflowWrap: "anywhere" }}>
-                          {author}
+                          <Typography component="span" sx={{ fontSize: "inherit", overflowWrap: "anywhere" }}>
+                            {author}
+                          </Typography>
+                        </Box>
+                        <Typography component="time" sx={{ flex: "0 0 auto", fontSize: "inherit" }}>
+                          {messageTime}
                         </Typography>
                       </Box>
-                      <Typography component="time" sx={{ fontSize: "inherit" }}>
-                        {messageTime}
-                      </Typography>
-                    </Box>
-                    <Typography sx={{ lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{message.content}</Typography>
-                  </Paper>
+                      <Typography sx={{ lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{message.content}</Typography>
+                    </Paper>
+                  </Box>
                 );
               })}
 
