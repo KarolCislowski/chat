@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect } from "react";
 import { Alert, Box, Button, Chip, Paper, TextField, Typography } from "@mui/material";
 import { PageFrame } from "../../components/layout/page-frame";
+import { getGuildFlagSet, getGuildThemeAccent, guildFlagSets, GuildThemeColor, resolveGuildEmblemUrl } from "../../lib/guild-flags";
 import { useAuthStore } from "../../stores/auth-store";
 import { Guild, useGuildStore } from "../../stores/guild-store";
 import { useLanguageStore } from "../../stores/language-store";
@@ -45,13 +46,108 @@ const fieldSx = {
   },
 };
 
-function getGuildInitials(name: string) {
-  return name
-    .split(" ")
-    .map((part) => part.charAt(0))
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
+function GuildEmblem({ guild, size = 42 }: { guild: Pick<Guild, "emblemUrl" | "name" | "themeColor">; size?: number }) {
+  const accent = getGuildThemeAccent(guild.themeColor);
+
+  return (
+    <Box
+      component="img"
+      alt={guild.name}
+      src={resolveGuildEmblemUrl(guild.emblemUrl, guild.themeColor)}
+      sx={{
+        border: `1px solid ${accent}88`,
+        flex: "0 0 auto",
+        height: size,
+        objectFit: "cover",
+        width: size,
+      }}
+    />
+  );
+}
+
+function GuildAppearancePicker({
+  disabled,
+  emblemUrl,
+  onChange,
+  themeColor,
+}: {
+  disabled: boolean;
+  emblemUrl: string;
+  onChange: (themeColor: GuildThemeColor, emblemUrl: string) => void;
+  themeColor: GuildThemeColor;
+}) {
+  const flagSet = getGuildFlagSet(themeColor);
+
+  return (
+    <Box sx={{ display: "grid", gap: 1.25 }}>
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
+        {guildFlagSets.map((set) => (
+          <Button
+            aria-label={set.label}
+            disabled={disabled}
+            key={set.label}
+            onClick={() => onChange(set.label, set.paths[0])}
+            sx={{
+              bgcolor: set.accent,
+              border: "1px solid",
+              borderColor: themeColor === set.label ? "#f8fbff" : "rgba(255, 255, 255, 0.22)",
+              boxShadow: themeColor === set.label ? `0 0 0 2px ${set.accent}55` : "none",
+              height: 24,
+              minWidth: 0,
+              p: 0,
+              width: 34,
+              "&:hover": {
+                bgcolor: set.accent,
+                opacity: 0.86,
+              },
+            }}
+            type="button"
+          />
+        ))}
+      </Box>
+
+      <Box
+        sx={{
+          bgcolor: "rgba(2, 8, 18, 0.3)",
+          border: "1px solid rgba(96, 165, 250, 0.14)",
+          borderRadius: 1,
+          display: "grid",
+          gap: 0.8,
+          gridTemplateColumns: "repeat(auto-fill, minmax(42px, 1fr))",
+          maxHeight: 146,
+          overflowY: "auto",
+          p: 1,
+        }}
+      >
+        {flagSet.paths.map((flagPath) => {
+          const isSelected = flagPath === emblemUrl;
+
+          return (
+            <Button
+              aria-label={flagPath}
+              disabled={disabled}
+              key={flagPath}
+              onClick={() => onChange(flagSet.label, flagPath)}
+              sx={{
+                border: "1px solid",
+                borderColor: isSelected ? `${flagSet.accent}` : "rgba(96, 165, 250, 0.12)",
+                borderRadius: 1,
+                minWidth: 0,
+                p: 0.35,
+                "&:hover": {
+                  bgcolor: "rgba(96, 165, 250, 0.1)",
+                  borderColor: flagSet.accent,
+                },
+              }}
+              type="button"
+            >
+              <Box component="img" alt="" src={flagPath} sx={{ display: "block", height: 38, objectFit: "cover", width: 38 }} />
+            </Button>
+          );
+        })}
+      </Box>
+    </Box>
+  );
 }
 
 export default function GuildsPage() {
@@ -71,9 +167,14 @@ export default function GuildsPage() {
   const loadAvailableGuilds = useGuildStore((state) => state.loadAvailableGuilds);
   const loadGuilds = useGuildStore((state) => state.loadGuilds);
   const loadJoinRequests = useGuildStore((state) => state.loadJoinRequests);
+  const emblemUrl = useGuildStore((state) => state.emblemUrl);
   const name = useGuildStore((state) => state.name);
   const requestJoin = useGuildStore((state) => state.requestJoin);
+  const setEmblemUrl = useGuildStore((state) => state.setEmblemUrl);
   const setName = useGuildStore((state) => state.setName);
+  const setThemeColor = useGuildStore((state) => state.setThemeColor);
+  const themeColor = useGuildStore((state) => state.themeColor);
+  const updateGuildAppearance = useGuildStore((state) => state.updateGuildAppearance);
   const t = useLanguageStore((state) => state.t);
   const isAuthenticated = Boolean(profile && tokens?.accessToken);
 
@@ -150,6 +251,14 @@ export default function GuildsPage() {
     }
   }
 
+  async function handleUpdateAppearance(guildId: string, nextThemeColor: GuildThemeColor, nextEmblemUrl: string) {
+    const accessToken = await getFreshAccessToken(apiBaseUrl);
+
+    if (accessToken) {
+      await updateGuildAppearance(apiBaseUrl, accessToken, guildId, nextThemeColor, nextEmblemUrl);
+    }
+  }
+
   return (
     <PageFrame>
       <Box sx={{ alignSelf: "start", display: "grid", gap: 3, justifySelf: "center", maxWidth: 1040, width: "100%" }}>
@@ -189,8 +298,28 @@ export default function GuildsPage() {
           <Typography component="h2" sx={{ color: "#f0b35f", fontSize: "1.05rem", fontWeight: 800, letterSpacing: 0.4 }}>
             {t.createGuild}
           </Typography>
-          <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: 1.25 }}>
+          <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "minmax(0, 1fr) 320px" } }}>
             <TextField disabled={isLoading} fullWidth label={t.guildName} onChange={(event) => setName(event.target.value)} required sx={fieldSx} value={name} />
+            <Box sx={{ alignItems: "center", display: "flex", gap: 1.25 }}>
+              <Box component="img" alt="" src={resolveGuildEmblemUrl(emblemUrl, themeColor)} sx={{ border: `1px solid ${getGuildThemeAccent(themeColor)}88`, height: 54, width: 54 }} />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ color: "#7dd3fc", fontSize: "0.72rem", fontWeight: 800, letterSpacing: 1, textTransform: "uppercase" }}>
+                  {t.guildAppearance}
+                </Typography>
+                <Typography sx={{ color: "#8ca3ba", fontSize: "0.85rem" }}>{themeColor}</Typography>
+              </Box>
+            </Box>
+          </Box>
+          <GuildAppearancePicker
+            disabled={isLoading}
+            emblemUrl={emblemUrl}
+            onChange={(nextThemeColor, nextEmblemUrl) => {
+              setThemeColor(nextThemeColor, nextEmblemUrl);
+              setEmblemUrl(nextEmblemUrl);
+            }}
+            themeColor={themeColor}
+          />
+          <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
             <Button
               disabled={isLoading || guilds.length >= 3}
               sx={{ bgcolor: "#1d4ed8", fontWeight: 800, minWidth: { sm: 160 }, textTransform: "none", "&:hover": { bgcolor: "#2563eb" } }}
@@ -234,22 +363,7 @@ export default function GuildsPage() {
                 >
                   <Box sx={{ alignItems: { xs: "flex-start", sm: "center" }, display: "flex", gap: 1.25, justifyContent: "space-between" }}>
                     <Box sx={{ alignItems: "center", display: "flex", gap: 1.35, minWidth: 0 }}>
-                      <Box
-                        sx={{
-                          alignItems: "center",
-                          border: "1px solid rgba(240, 179, 95, 0.58)",
-                          color: "#f0b35f",
-                          display: "flex",
-                          flex: "0 0 auto",
-                          fontSize: "0.82rem",
-                          fontWeight: 900,
-                          height: 40,
-                          justifyContent: "center",
-                          width: 34,
-                        }}
-                      >
-                        {getGuildInitials(guild.name)}
-                      </Box>
+                      <GuildEmblem guild={guild} />
                       <Box sx={{ minWidth: 0 }}>
                         <Typography component="h3" sx={{ color: "#f8fbff", fontSize: "1.05rem", fontWeight: 800 }}>
                           {guild.name}
@@ -309,6 +423,20 @@ export default function GuildsPage() {
                       ))}
                     </Box>
                   ) : null}
+
+                  {canManageGuild(guild) ? (
+                    <Box sx={{ display: "grid", gap: 1 }}>
+                      <Typography sx={{ color: "#7dd3fc", fontSize: "0.72rem", fontWeight: 800, letterSpacing: 1, textTransform: "uppercase" }}>
+                        {t.guildAppearance}
+                      </Typography>
+                      <GuildAppearancePicker
+                        disabled={isLoading}
+                        emblemUrl={resolveGuildEmblemUrl(guild.emblemUrl, guild.themeColor)}
+                        onChange={(nextThemeColor, nextEmblemUrl) => void handleUpdateAppearance(guild._id, nextThemeColor, nextEmblemUrl)}
+                        themeColor={guild.themeColor}
+                      />
+                    </Box>
+                  ) : null}
                 </Paper>
               );
             })}
@@ -328,21 +456,7 @@ export default function GuildsPage() {
             {availableGuilds.map((guild) => (
               <Paper key={guild._id} sx={{ ...panelSx, display: "grid", gap: 1.5, p: 2 }}>
                 <Box sx={{ alignItems: "center", display: "flex", gap: 1.35 }}>
-                  <Box
-                    sx={{
-                      alignItems: "center",
-                      border: "1px solid rgba(96, 165, 250, 0.5)",
-                      color: "#7dd3fc",
-                      display: "flex",
-                      fontSize: "0.82rem",
-                      fontWeight: 900,
-                      height: 40,
-                      justifyContent: "center",
-                      width: 34,
-                    }}
-                  >
-                    {getGuildInitials(guild.name)}
-                  </Box>
+                  <GuildEmblem guild={guild} />
                   <Box>
                     <Typography component="h3" sx={{ color: "#f8fbff", fontSize: "1.05rem", fontWeight: 800 }}>
                       {guild.name}

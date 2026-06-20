@@ -27,10 +27,20 @@ import {
 } from "@mui/material";
 import { useAuthStore } from "../stores/auth-store";
 import { resolveAvatarPath } from "../lib/avatar-options";
+import { getGuildThemeAccent, resolveGuildEmblemUrl } from "../lib/guild-flags";
 import { getChatChannelKey, useChatStore } from "../stores/chat-store";
-import { useGuildStore } from "../stores/guild-store";
+import { Guild, useGuildStore } from "../stores/guild-store";
 import { useLanguageStore } from "../stores/language-store";
 import { useUserStore, type ChatUser } from "../stores/user-store";
+
+function hexToRgba(hexColor: string, alpha: number) {
+  const normalizedHex = hexColor.replace("#", "");
+  const red = parseInt(normalizedHex.slice(0, 2), 16);
+  const green = parseInt(normalizedHex.slice(2, 4), 16);
+  const blue = parseInt(normalizedHex.slice(4, 6), 16);
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
 
 export default function Home() {
   const router = useRouter();
@@ -82,6 +92,7 @@ export default function Home() {
   const isApiConnected = health?.status === "ok" && health.database === "connected";
   const isAuthenticated = Boolean(profile && tokens?.accessToken);
   const activeGuild = activeChannel.type === "guild" ? guilds.find((guild) => guild._id === activeChannel.guildId) : null;
+  const composeGuild = composeChannel.type === "guild" ? guilds.find((guild) => guild._id === composeChannel.guildId) : null;
   const activeChannelTitle =
     activeChannel.type === "open" ? t.openChat : activeChannel.type === "whisper" ? activeChannel.recipientDisplayName : activeGuild?.name ?? t.globalChat;
   const channelAppearance = useMemo(() => {
@@ -99,15 +110,17 @@ export default function Home() {
     }
 
     if (activeChannel.type === "guild") {
+      const accent = getGuildThemeAccent(activeGuild?.themeColor);
+
       return {
-        accent: "#f0b35f",
-        badgeBg: "rgba(240, 179, 95, 0.15)",
-        badgeColor: "#ffd9a3",
+        accent,
+        badgeBg: hexToRgba(accent, 0.16),
+        badgeColor: accent,
         label: t.guilds,
-        messageBg: "rgba(240, 179, 95, 0.13)",
-        messageBorder: "rgba(240, 179, 95, 0.34)",
+        messageBg: hexToRgba(accent, 0.13),
+        messageBorder: hexToRgba(accent, 0.36),
         pageBg: "rgba(12, 17, 26, 0.78)",
-        softBg: "rgba(240, 179, 95, 0.09)",
+        softBg: hexToRgba(accent, 0.09),
       };
     }
 
@@ -134,13 +147,15 @@ export default function Home() {
       pageBg: "rgba(3, 22, 20, 0.72)",
       softBg: "rgba(74, 222, 128, 0.07)",
     };
-  }, [activeChannel.type, t.globalChat, t.guilds, t.openChat, t.whisper]);
+  }, [activeChannel.type, activeGuild?.themeColor, t.globalChat, t.guilds, t.openChat, t.whisper]);
   const composeAppearance = useMemo(() => {
     if (composeChannel.type === "guild") {
+      const accent = getGuildThemeAccent(composeGuild?.themeColor);
+
       return {
-        accent: "#b56a1f",
-        badgeColor: "#7c3f0b",
-        messageBorder: "rgba(181, 106, 31, 0.32)",
+        accent,
+        badgeColor: accent,
+        messageBorder: hexToRgba(accent, 0.32),
       };
     }
 
@@ -157,7 +172,7 @@ export default function Home() {
       badgeColor: "#0f5f59",
       messageBorder: "rgba(20, 108, 95, 0.24)",
     };
-  }, [composeChannel.type]);
+  }, [composeChannel.type, composeGuild?.themeColor]);
   const manageableGuilds = useMemo(() => guilds.filter((guild) => ["owner", "officer"].includes(guild.membership.role ?? "")), [guilds]);
   const onlineUsers = useMemo(() => users.filter((user) => user.onlineStatus !== "offline"), [users]);
   const [playerMenuAnchor, setPlayerMenuAnchor] = useState<HTMLElement | null>(null);
@@ -293,7 +308,7 @@ export default function Home() {
     await inviteMember(apiBaseUrl, accessToken, guildId, player.accountId);
   }
 
-  function renderChannelPrimary(label: string, channel: Parameters<typeof setActiveChannel>[0]) {
+  function renderChannelPrimary(label: string, channel: Parameters<typeof setActiveChannel>[0], endAdornment?: ReactNode) {
     const unreadCount = unreadByChannel[getChatChannelKey(channel)] ?? 0;
 
     return (
@@ -304,6 +319,7 @@ export default function Home() {
         <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {label}
         </Box>
+        {endAdornment}
         {unreadCount > 0 ? (
           <Badge
             badgeContent={unreadCount > 99 ? "99+" : unreadCount}
@@ -359,6 +375,38 @@ export default function Home() {
           recipientId: user.accountId,
           type: "whisper",
         })}
+      </Box>
+    );
+  }
+
+  function renderGuildRailPrimary(guild: Guild) {
+    const accent = getGuildThemeAccent(guild.themeColor);
+
+    return (
+      <Box component="span" sx={{ alignItems: "stretch", display: "flex", gap: 1.35, minHeight: 68, minWidth: 0 }}>
+        <Box
+          component="img"
+          alt=""
+          src={resolveGuildEmblemUrl(guild.emblemUrl, guild.themeColor)}
+          sx={{
+            alignSelf: "stretch",
+            display: "block",
+            flex: "0 0 auto",
+            filter: `drop-shadow(0 0 8px ${accent}55)`,
+            height: 68,
+            objectFit: "contain",
+            width: 44,
+          }}
+        />
+        <Box component="span" sx={{ alignItems: "center", display: "flex", flex: "1 1 auto", minWidth: 0 }}>
+          {renderChannelPrimary(
+            guild.name,
+            { guildId: guild._id, type: "guild" },
+            <Box component="span" sx={{ color: "#b7c3cf", flex: "0 0 auto", fontSize: "0.78rem", fontWeight: 700 }}>
+              {guild.members.length}
+            </Box>,
+          )}
+        </Box>
       </Box>
     );
   }
@@ -450,10 +498,8 @@ export default function Home() {
           >
             <ListItemText
               primary={renderRailPrimary(t.openChat, { type: "open" }, "O", "#60a5fa")}
-              secondary={t.conversations}
               slotProps={{
                 primary: { sx: { fontWeight: 700 } },
-                secondary: { sx: { color: "#b7c3cf", fontSize: "0.85rem" } },
               }}
             />
           </ListItemButton>
@@ -466,10 +512,8 @@ export default function Home() {
           >
             <ListItemText
               primary={renderRailPrimary(t.globalChat, { type: "global" }, "◎", "#4ade80")}
-              secondary={isAuthenticated ? t.local : t.conversationRequiresLogin}
               slotProps={{
                 primary: { sx: { fontWeight: 700 } },
-                secondary: { sx: { color: "#b7c3cf", fontSize: "0.85rem" } },
               }}
             />
           </ListItemButton>
@@ -497,14 +541,17 @@ export default function Home() {
               key={guild._id}
               onClick={() => handleChannelChange({ guildId: guild._id, type: "guild" })}
               selected={activeChannel.type === "guild" && activeChannel.guildId === guild._id}
-              sx={railItemSx(activeChannel.type === "guild" && activeChannel.guildId === guild._id, "#f0b35f")}
+              sx={{
+                ...railItemSx(activeChannel.type === "guild" && activeChannel.guildId === guild._id, getGuildThemeAccent(guild.themeColor)),
+                minHeight: 72,
+                overflow: "hidden",
+                py: 0,
+              }}
             >
               <ListItemText
-                primary={renderRailPrimary(guild.name, { guildId: guild._id, type: "guild" }, "♜", "#f0b35f")}
-                secondary={`${guild.members.length} members`}
+                primary={renderGuildRailPrimary(guild)}
                 slotProps={{
                   primary: { sx: { fontWeight: 700 } },
-                  secondary: { sx: { color: "#b7c3cf", fontSize: "0.85rem" } },
                 }}
               />
             </ListItemButton>

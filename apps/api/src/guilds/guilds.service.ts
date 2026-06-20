@@ -3,11 +3,13 @@ import { InjectModel } from "@nestjs/mongoose";
 import { randomBytes } from "crypto";
 import { Model, Types } from "mongoose";
 import { UserProfile, UserProfileDocument } from "../users/schemas/user-profile.schema";
-import { Guild, GuildDocument } from "./schemas/guild.schema";
+import { Guild, GuildDocument, GuildThemeColor } from "./schemas/guild.schema";
 import { GuildJoinRequest, GuildJoinRequestDocument } from "./schemas/guild-join-request.schema";
 import { GuildMembership, GuildMembershipDocument } from "./schemas/guild-membership.schema";
 
 const MAX_GUILDS_PER_USER = 3;
+const DEFAULT_GUILD_THEME_COLOR: GuildThemeColor = "red";
+const DEFAULT_GUILD_EMBLEM_URL = "/assets/imgs/flags/red/crest_001_16_29_41_r1_c1.png";
 
 @Injectable()
 export class GuildsService {
@@ -18,15 +20,18 @@ export class GuildsService {
     @InjectModel(UserProfile.name) private readonly profileModel: Model<UserProfileDocument>,
   ) {}
 
-  async createGuild(accountId: string, name: string) {
+  async createGuild(accountId: string, name: string, themeColor = DEFAULT_GUILD_THEME_COLOR, emblemUrl = DEFAULT_GUILD_EMBLEM_URL) {
     await this.assertMembershipLimit(accountId);
+    this.assertGuildAppearance(themeColor, emblemUrl);
 
     const guild = await this.guildModel.create({
+      emblemUrl,
       inviteCodes: [this.createInviteCode()],
       members: [new Types.ObjectId(accountId)],
       name: name.trim(),
       ownerId: new Types.ObjectId(accountId),
       slug: await this.createUniqueSlug(name),
+      themeColor,
     });
 
     const membership = await this.membershipModel.create({
@@ -34,6 +39,18 @@ export class GuildsService {
       role: "owner",
       userId: new Types.ObjectId(accountId),
     });
+
+    return this.toGuildResponse(guild, membership.role);
+  }
+
+  async updateAppearance(accountId: string, guildId: string, themeColor: GuildThemeColor, emblemUrl: string) {
+    const membership = await this.assertCanManageGuild(accountId, guildId);
+    this.assertGuildAppearance(themeColor, emblemUrl);
+    const guild = await this.guildModel.findByIdAndUpdate(guildId, { $set: { emblemUrl, themeColor } }, { new: true }).exec();
+
+    if (!guild) {
+      throw new NotFoundException("Guild was not found.");
+    }
 
     return this.toGuildResponse(guild, membership.role);
   }
@@ -316,6 +333,12 @@ export class GuildsService {
     return randomBytes(8).toString("hex");
   }
 
+  private assertGuildAppearance(themeColor: GuildThemeColor, emblemUrl: string) {
+    if (!emblemUrl.startsWith(`/assets/imgs/flags/${themeColor}/`)) {
+      throw new BadRequestException("Guild emblem must belong to the selected theme color.");
+    }
+  }
+
   private toGuildResponse(guild: GuildDocument, role: GuildMembershipDocument["role"] | null) {
     return {
       _id: guild.id,
@@ -324,6 +347,8 @@ export class GuildsService {
       ownerId: guild.ownerId.toString(),
       members: guild.members.map((memberId) => memberId.toString()),
       inviteCodes: guild.inviteCodes,
+      themeColor: guild.themeColor ?? DEFAULT_GUILD_THEME_COLOR,
+      emblemUrl: guild.emblemUrl ?? DEFAULT_GUILD_EMBLEM_URL,
       createdAt: guild.createdAt,
       membership: {
         role,

@@ -26,6 +26,7 @@ export const en = {
   email: "Email",
   globalChat: "Global chat",
   guildLimit: "You can belong to up to 3 guilds.",
+  guildAppearance: "Guild appearance",
   guildName: "Guild name",
   guilds: "Guilds",
   inviteToGuild: "Invite to",

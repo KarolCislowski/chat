@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Param, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { AuthenticatedRequest } from "../auth/types/authenticated-request";
 import { CreateGuildDto } from "./dto/create-guild.dto";
 import { InviteGuildMemberDto } from "./dto/invite-guild-member.dto";
 import { JoinGuildDto } from "./dto/join-guild.dto";
+import { UpdateGuildAppearanceDto } from "./dto/update-guild-appearance.dto";
 import { GuildsService } from "./guilds.service";
 
 @UseGuards(JwtAuthGuard)
@@ -23,7 +24,12 @@ export class GuildsController {
 
   @Post()
   createGuild(@Req() request: AuthenticatedRequest, @Body() dto: CreateGuildDto) {
-    return this.guildsService.createGuild(request.user.accountId, dto.name);
+    return this.guildsService.createGuild(request.user.accountId, dto.name, dto.themeColor, dto.emblemUrl);
+  }
+
+  @Patch(":guildId/appearance")
+  updateAppearance(@Req() request: AuthenticatedRequest, @Param("guildId") guildId: string, @Body() dto: UpdateGuildAppearanceDto) {
+    return this.guildsService.updateAppearance(request.user.accountId, guildId, dto.themeColor, dto.emblemUrl);
   }
 
   @Post("join")

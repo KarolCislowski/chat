@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { defaultGuildEmblemUrl, defaultGuildThemeColor, GuildThemeColor } from "../lib/guild-flags";
 
 export type GuildRole = "owner" | "officer" | "member";
 export type JoinRequestStatus = "pending" | "accepted" | "rejected";
@@ -10,6 +11,8 @@ export type Guild = {
   ownerId: string;
   members: string[];
   inviteCodes: string[];
+  themeColor: GuildThemeColor;
+  emblemUrl: string;
   createdAt: string;
   membership: {
     role: GuildRole | null;
@@ -38,7 +41,9 @@ type GuildState = {
   guilds: Guild[];
   isLoading: boolean;
   joinRequestsByGuildId: Record<string, GuildJoinRequest[]>;
+  emblemUrl: string;
   name: string;
+  themeColor: GuildThemeColor;
   acceptJoinRequest: (apiBaseUrl: string, accessToken: string, guildId: string, requestId: string) => Promise<void>;
   createGuild: (apiBaseUrl: string, accessToken: string) => Promise<void>;
   inviteMember: (apiBaseUrl: string, accessToken: string, guildId: string, userId: string) => Promise<void>;
@@ -46,7 +51,10 @@ type GuildState = {
   loadGuilds: (apiBaseUrl: string, accessToken: string) => Promise<void>;
   loadJoinRequests: (apiBaseUrl: string, accessToken: string, guildId: string) => Promise<void>;
   requestJoin: (apiBaseUrl: string, accessToken: string, guildId: string) => Promise<void>;
+  setEmblemUrl: (emblemUrl: string) => void;
   setName: (name: string) => void;
+  setThemeColor: (themeColor: GuildThemeColor, emblemUrl: string) => void;
+  updateGuildAppearance: (apiBaseUrl: string, accessToken: string, guildId: string, themeColor: GuildThemeColor, emblemUrl: string) => Promise<void>;
 };
 
 async function getErrorMessage(response: Response) {
@@ -77,7 +85,9 @@ export const useGuildStore = create<GuildState>((set, get) => ({
   guilds: [],
   isLoading: false,
   joinRequestsByGuildId: {},
+  emblemUrl: defaultGuildEmblemUrl,
   name: "",
+  themeColor: defaultGuildThemeColor,
   acceptJoinRequest: async (apiBaseUrl, accessToken, guildId, requestId) => {
     set({ error: null, isLoading: true });
 
@@ -105,6 +115,7 @@ export const useGuildStore = create<GuildState>((set, get) => ({
   },
   createGuild: async (apiBaseUrl, accessToken) => {
     const name = get().name.trim();
+    const { emblemUrl, themeColor } = get();
 
     if (!name) {
       return;
@@ -114,7 +125,7 @@ export const useGuildStore = create<GuildState>((set, get) => ({
 
     try {
       const response = await fetch(`${apiBaseUrl}/guilds`, {
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ emblemUrl, name, themeColor }),
         headers: authHeaders(accessToken),
         method: "POST",
       });
@@ -124,7 +135,7 @@ export const useGuildStore = create<GuildState>((set, get) => ({
       }
 
       const guild = (await response.json()) as Guild;
-      set((state) => ({ error: null, guilds: upsertGuild(state.guilds, guild), isLoading: false, name: "" }));
+      set((state) => ({ emblemUrl: defaultGuildEmblemUrl, error: null, guilds: upsertGuild(state.guilds, guild), isLoading: false, name: "", themeColor: defaultGuildThemeColor }));
     } catch (error) {
       set({ error: error instanceof Error ? error.message : "Guild creation failed", isLoading: false });
     }
@@ -238,5 +249,32 @@ export const useGuildStore = create<GuildState>((set, get) => ({
       set({ error: error instanceof Error ? error.message : "Join request failed", isLoading: false });
     }
   },
+  setEmblemUrl: (emblemUrl) => set({ emblemUrl }),
   setName: (name) => set({ name }),
+  setThemeColor: (themeColor, emblemUrl) => set({ emblemUrl, themeColor }),
+  updateGuildAppearance: async (apiBaseUrl, accessToken, guildId, themeColor, emblemUrl) => {
+    set({ error: null, isLoading: true });
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/guilds/${guildId}/appearance`, {
+        body: JSON.stringify({ emblemUrl, themeColor }),
+        headers: authHeaders(accessToken),
+        method: "PATCH",
+      });
+
+      if (!response.ok) {
+        throw new Error(await getErrorMessage(response));
+      }
+
+      const guild = (await response.json()) as Guild;
+      set((state) => ({
+        availableGuilds: state.availableGuilds.map((availableGuild) => (availableGuild._id === guild._id ? guild : availableGuild)),
+        error: null,
+        guilds: upsertGuild(state.guilds, guild),
+        isLoading: false,
+      }));
+    } catch (error) {
+      set({ error: error instanceof Error ? error.message : "Guild appearance update failed", isLoading: false });
+    }
+  },
 }));

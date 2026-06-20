@@ -3,6 +3,7 @@ import { HydratedDocument, Schema as MongooseSchema, Types } from "mongoose";
 import { UserAccount } from "../../users/schemas/user-account.schema";
 
 export type GuildDocument = HydratedDocument<Guild>;
+export type GuildThemeColor = "black" | "blue" | "green" | "pink" | "purple" | "red" | "white";
 
 @Schema({ timestamps: { createdAt: true, updatedAt: false } })
 export class Guild {
@@ -20,6 +21,12 @@ export class Guild {
 
   @Prop({ default: [], type: [String] })
   inviteCodes!: string[];
+
+  @Prop({ default: "red", enum: ["black", "blue", "green", "pink", "purple", "red", "white"], required: true })
+  themeColor!: GuildThemeColor;
+
+  @Prop({ default: "/assets/imgs/flags/red/crest_001_16_29_41_r1_c1.png", required: true, trim: true })
+  emblemUrl!: string;
 
   createdAt!: Date;
 }
