@@ -41,6 +41,7 @@ type GuildState = {
   name: string;
   acceptJoinRequest: (apiBaseUrl: string, accessToken: string, guildId: string, requestId: string) => Promise<void>;
   createGuild: (apiBaseUrl: string, accessToken: string) => Promise<void>;
+  inviteMember: (apiBaseUrl: string, accessToken: string, guildId: string, userId: string) => Promise<void>;
   loadAvailableGuilds: (apiBaseUrl: string, accessToken: string) => Promise<void>;
   loadGuilds: (apiBaseUrl: string, accessToken: string) => Promise<void>;
   loadJoinRequests: (apiBaseUrl: string, accessToken: string, guildId: string) => Promise<void>;
@@ -126,6 +127,26 @@ export const useGuildStore = create<GuildState>((set, get) => ({
       set((state) => ({ error: null, guilds: upsertGuild(state.guilds, guild), isLoading: false, name: "" }));
     } catch (error) {
       set({ error: error instanceof Error ? error.message : "Guild creation failed", isLoading: false });
+    }
+  },
+  inviteMember: async (apiBaseUrl, accessToken, guildId, userId) => {
+    set({ error: null, isLoading: true });
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/guilds/${guildId}/members`, {
+        body: JSON.stringify({ userId }),
+        headers: authHeaders(accessToken),
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error(await getErrorMessage(response));
+      }
+
+      const guild = (await response.json()) as Guild;
+      set((state) => ({ error: null, guilds: upsertGuild(state.guilds, guild), isLoading: false }));
+    } catch (error) {
+      set({ error: error instanceof Error ? error.message : "Guild invitation failed", isLoading: false });
     }
   },
   loadAvailableGuilds: async (apiBaseUrl, accessToken) => {

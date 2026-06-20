@@ -2,17 +2,19 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useMemo } from "react";
+import { FormEvent, MouseEvent, useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
   Chip,
   Divider,
   FormControl,
+  IconButton,
   InputLabel,
   List,
   ListItemButton,
   ListItemText,
+  Menu,
   MenuItem,
   Paper,
   Select,
@@ -27,7 +29,7 @@ import { useAuthStore } from "../stores/auth-store";
 import { getChatChannelKey, useChatStore } from "../stores/chat-store";
 import { useGuildStore } from "../stores/guild-store";
 import { useLanguageStore } from "../stores/language-store";
-import { useUserStore } from "../stores/user-store";
+import { useUserStore, type ChatUser } from "../stores/user-store";
 
 export default function Home() {
   const router = useRouter();
@@ -49,6 +51,8 @@ export default function Home() {
   const setCurrentAccountId = useChatStore((state) => state.setCurrentAccountId);
   const setDraft = useChatStore((state) => state.setDraft);
   const guilds = useGuildStore((state) => state.guilds);
+  const guildError = useGuildStore((state) => state.error);
+  const inviteMember = useGuildStore((state) => state.inviteMember);
   const loadGuilds = useGuildStore((state) => state.loadGuilds);
   const users = useUserStore((state) => state.users);
   const usersError = useUserStore((state) => state.error);
@@ -90,6 +94,10 @@ export default function Home() {
   const isAuthenticated = Boolean(profile && tokens?.accessToken);
   const activeGuild = activeChannel.type === "guild" ? guilds.find((guild) => guild._id === activeChannel.guildId) : null;
   const activeChannelTitle = activeChannel.type === "whisper" ? activeChannel.recipientDisplayName : activeGuild?.name ?? t.globalChat;
+  const manageableGuilds = useMemo(() => guilds.filter((guild) => ["owner", "officer"].includes(guild.membership.role ?? "")), [guilds]);
+  const onlineUsers = useMemo(() => users.filter((user) => user.onlineStatus !== "offline"), [users]);
+  const [playerMenuAnchor, setPlayerMenuAnchor] = useState<HTMLElement | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<ChatUser | null>(null);
 
   useEffect(() => {
     if (hasHydrated && !isAuthenticated) {
@@ -169,11 +177,51 @@ export default function Home() {
     setActiveChannel(channel);
   }
 
+  function handlePlayerMenuOpen(event: MouseEvent<HTMLButtonElement>, user: ChatUser) {
+    event.stopPropagation();
+    setSelectedPlayer(user);
+    setPlayerMenuAnchor(event.currentTarget);
+  }
+
+  function handlePlayerMenuClose() {
+    setPlayerMenuAnchor(null);
+    setSelectedPlayer(null);
+  }
+
+  function startWhisper(user: ChatUser) {
+    handleChannelChange({
+      recipientDisplayName: user.displayName,
+      recipientId: user.accountId,
+      type: "whisper",
+    });
+    handlePlayerMenuClose();
+  }
+
+  async function inviteSelectedPlayer(guildId: string) {
+    if (!selectedPlayer) {
+      return;
+    }
+
+    const player = selectedPlayer;
+    handlePlayerMenuClose();
+
+    const accessToken = await getFreshAccessToken(apiBaseUrl);
+
+    if (!accessToken) {
+      return;
+    }
+
+    await inviteMember(apiBaseUrl, accessToken, guildId, player.accountId);
+  }
+
   function renderChannelPrimary(label: string, channel: Parameters<typeof setActiveChannel>[0]) {
     const unreadCount = unreadByChannel[getChatChannelKey(channel)] ?? 0;
 
     return (
-      <Box component="span" sx={{ alignItems: "center", columnGap: 1.75, display: "flex", justifyContent: "space-between", minWidth: 0 }}>
+      <Box
+        component="span"
+        sx={{ alignItems: "center", columnGap: 1.75, display: "flex", flex: "1 1 auto", justifyContent: "space-between", minWidth: 0 }}
+      >
         <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {label}
         </Box>
@@ -357,21 +405,15 @@ export default function Home() {
           ))}
 
           <Typography color="#8aa3b5" sx={{ fontSize: "0.75rem", fontWeight: 700, pt: 1, textTransform: "uppercase" }}>
-            {t.whisper}
+            {t.onlinePlayers}
           </Typography>
 
-          {users.length > 0 ? (
-            users.map((user) => (
+          {onlineUsers.length > 0 ? (
+            onlineUsers.map((user) => (
               <ListItemButton
                 disabled={!isAuthenticated}
                 key={user.accountId}
-                onClick={() =>
-                  handleChannelChange({
-                    recipientDisplayName: user.displayName,
-                    recipientId: user.accountId,
-                    type: "whisper",
-                  })
-                }
+                onClick={() => startWhisper(user)}
                 selected={activeChannel.type === "whisper" && activeChannel.recipientId === user.accountId}
                 sx={{
                   border: "1px solid rgba(255, 255, 255, 0.1)",
@@ -388,11 +430,27 @@ export default function Home() {
                 }}
               >
                 <ListItemText
-                  primary={renderChannelPrimary(user.displayName, {
-                    recipientDisplayName: user.displayName,
-                    recipientId: user.accountId,
-                    type: "whisper",
-                  })}
+                  primary={
+                    <Box component="span" sx={{ alignItems: "center", display: "flex", gap: 1, justifyContent: "space-between", minWidth: 0 }}>
+                      {renderChannelPrimary(user.displayName, {
+                        recipientDisplayName: user.displayName,
+                        recipientId: user.accountId,
+                        type: "whisper",
+                      })}
+                      <IconButton
+                        aria-label={`${user.displayName} menu`}
+                        color="inherit"
+                        onClick={(event) => handlePlayerMenuOpen(event, user)}
+                        size="small"
+                        sx={{ color: "#f8fafc", flex: "0 0 auto", height: 28, width: 28 }}
+                        type="button"
+                      >
+                        <Box component="span" sx={{ fontSize: "1rem", lineHeight: 1 }}>
+                          ...
+                        </Box>
+                      </IconButton>
+                    </Box>
+                  }
                   secondary={user.onlineStatus}
                   slotProps={{
                     primary: { sx: { fontWeight: 700 } },
@@ -402,8 +460,21 @@ export default function Home() {
               </ListItemButton>
             ))
           ) : (
-            <Typography sx={{ color: "#b7c3cf", fontSize: "0.85rem" }}>{t.noUsers}</Typography>
+            <Typography sx={{ color: "#b7c3cf", fontSize: "0.85rem" }}>{t.noOnlinePlayers}</Typography>
           )}
+
+          <Menu anchorEl={playerMenuAnchor} onClose={handlePlayerMenuClose} open={Boolean(playerMenuAnchor)}>
+            {selectedPlayer ? <MenuItem onClick={() => startWhisper(selectedPlayer)}>{t.startWhisper}</MenuItem> : null}
+            {selectedPlayer
+              ? manageableGuilds
+                  .filter((guild) => !guild.members.includes(selectedPlayer.accountId))
+                  .map((guild) => (
+                    <MenuItem key={guild._id} onClick={() => void inviteSelectedPlayer(guild._id)}>
+                      {t.inviteToGuild} {guild.name}
+                    </MenuItem>
+                  ))
+              : null}
+          </Menu>
 
           <ListItemButton
             component="a"
@@ -561,6 +632,12 @@ export default function Home() {
               {usersError ? (
                 <Alert severity="warning" variant="outlined">
                   {usersError}
+                </Alert>
+              ) : null}
+
+              {guildError ? (
+                <Alert severity="warning" variant="outlined">
+                  {guildError}
                 </Alert>
               ) : null}
             </Box>

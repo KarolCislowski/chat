@@ -142,6 +142,49 @@ export class GuildsService {
     };
   }
 
+  async inviteMember(accountId: string, guildId: string, userId: string) {
+    const membership = await this.assertCanManageGuild(accountId, guildId);
+
+    if (!Types.ObjectId.isValid(userId)) {
+      throw new NotFoundException("User was not found.");
+    }
+
+    if (accountId === userId) {
+      throw new BadRequestException("You are already a member of this guild.");
+    }
+
+    const [guild, profile, existingMembership] = await Promise.all([
+      this.guildModel.findById(guildId).exec(),
+      this.profileModel.findOne({ accountId: userId }).exec(),
+      this.membershipModel.exists({ guildId, userId }),
+    ]);
+
+    if (!guild) {
+      throw new NotFoundException("Guild was not found.");
+    }
+
+    if (!profile) {
+      throw new NotFoundException("User was not found.");
+    }
+
+    if (existingMembership) {
+      throw new BadRequestException("User is already a member of this guild.");
+    }
+
+    await this.assertMembershipLimit(userId);
+
+    await this.membershipModel.create({
+      guildId: guild._id,
+      role: "member",
+      userId: new Types.ObjectId(userId),
+    });
+    await this.guildModel.updateOne({ _id: guild._id }, { $addToSet: { members: new Types.ObjectId(userId) } }).exec();
+
+    guild.members = [...guild.members, new Types.ObjectId(userId)];
+
+    return this.toGuildResponse(guild, membership.role);
+  }
+
   async requestJoin(accountId: string, guildId: string) {
     await this.assertMembershipLimit(accountId);
 

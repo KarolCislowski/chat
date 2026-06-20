@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post, Req, UseGuards } from "@nestjs/comm
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { AuthenticatedRequest } from "../auth/types/authenticated-request";
 import { CreateGuildDto } from "./dto/create-guild.dto";
+import { InviteGuildMemberDto } from "./dto/invite-guild-member.dto";
 import { JoinGuildDto } from "./dto/join-guild.dto";
 import { GuildsService } from "./guilds.service";
 
@@ -33,6 +34,11 @@ export class GuildsController {
   @Post(":guildId/invites")
   createInvite(@Req() request: AuthenticatedRequest, @Param("guildId") guildId: string) {
     return this.guildsService.createInvite(request.user.accountId, guildId);
+  }
+
+  @Post(":guildId/members")
+  inviteMember(@Req() request: AuthenticatedRequest, @Param("guildId") guildId: string, @Body() dto: InviteGuildMemberDto) {
+    return this.guildsService.inviteMember(request.user.accountId, guildId, dto.userId);
   }
 
   @Get(":guildId/join-requests")
