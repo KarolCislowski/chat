@@ -35,6 +35,7 @@ export default function Home() {
   const router = useRouter();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";
   const activeChannel = useChatStore((state) => state.activeChannel);
+  const composeChannel = useChatStore((state) => state.composeChannel);
   const draft = useChatStore((state) => state.draft);
   const connectionError = useChatStore((state) => state.connectionError);
   const connectionStatus = useChatStore((state) => state.connectionStatus);
@@ -48,6 +49,7 @@ export default function Home() {
   const loadMessages = useChatStore((state) => state.loadMessages);
   const sendMessage = useChatStore((state) => state.sendMessage);
   const setActiveChannel = useChatStore((state) => state.setActiveChannel);
+  const setComposeChannel = useChatStore((state) => state.setComposeChannel);
   const setCurrentAccountId = useChatStore((state) => state.setCurrentAccountId);
   const setDraft = useChatStore((state) => state.setDraft);
   const guilds = useGuildStore((state) => state.guilds);
@@ -93,8 +95,22 @@ export default function Home() {
   const isApiConnected = health?.status === "ok" && health.database === "connected";
   const isAuthenticated = Boolean(profile && tokens?.accessToken);
   const activeGuild = activeChannel.type === "guild" ? guilds.find((guild) => guild._id === activeChannel.guildId) : null;
-  const activeChannelTitle = activeChannel.type === "whisper" ? activeChannel.recipientDisplayName : activeGuild?.name ?? t.globalChat;
+  const activeChannelTitle =
+    activeChannel.type === "open" ? t.openChat : activeChannel.type === "whisper" ? activeChannel.recipientDisplayName : activeGuild?.name ?? t.globalChat;
   const channelAppearance = useMemo(() => {
+    if (activeChannel.type === "open") {
+      return {
+        accent: "#475569",
+        badgeBg: "#f1f5f9",
+        badgeColor: "#334155",
+        label: t.openChat,
+        messageBg: "#f8fafc",
+        messageBorder: "rgba(71, 85, 105, 0.24)",
+        pageBg: "#f8fafc",
+        softBg: "rgba(71, 85, 105, 0.08)",
+      };
+    }
+
     if (activeChannel.type === "guild") {
       return {
         accent: "#b56a1f",
@@ -131,7 +147,30 @@ export default function Home() {
       pageBg: "#f7fbf9",
       softBg: "rgba(15, 118, 110, 0.08)",
     };
-  }, [activeChannel.type, t.globalChat, t.guilds, t.whisper]);
+  }, [activeChannel.type, t.globalChat, t.guilds, t.openChat, t.whisper]);
+  const composeAppearance = useMemo(() => {
+    if (composeChannel.type === "guild") {
+      return {
+        accent: "#b56a1f",
+        badgeColor: "#7c3f0b",
+        messageBorder: "rgba(181, 106, 31, 0.32)",
+      };
+    }
+
+    if (composeChannel.type === "whisper") {
+      return {
+        accent: "#2563eb",
+        badgeColor: "#1d4ed8",
+        messageBorder: "rgba(37, 99, 235, 0.28)",
+      };
+    }
+
+    return {
+      accent: "#0f766e",
+      badgeColor: "#0f5f59",
+      messageBorder: "rgba(20, 108, 95, 0.24)",
+    };
+  }, [composeChannel.type]);
   const manageableGuilds = useMemo(() => guilds.filter((guild) => ["owner", "officer"].includes(guild.membership.role ?? "")), [guilds]);
   const onlineUsers = useMemo(() => users.filter((user) => user.onlineStatus !== "offline"), [users]);
   const [playerMenuAnchor, setPlayerMenuAnchor] = useState<HTMLElement | null>(null);
@@ -213,6 +252,54 @@ export default function Home() {
 
   function handleChannelChange(channel: Parameters<typeof setActiveChannel>[0]) {
     setActiveChannel(channel);
+  }
+
+  function getComposeChannelValue(channel: typeof composeChannel) {
+    return getChatChannelKey(channel);
+  }
+
+  function handleComposeChannelChange(event: SelectChangeEvent<string>) {
+    const channelKey = event.target.value;
+
+    if (channelKey === "global") {
+      setComposeChannel({ type: "global" });
+      return;
+    }
+
+    if (channelKey.startsWith("guild:")) {
+      const guildId = channelKey.replace("guild:", "");
+      const guild = guilds.find((guild) => guild._id === guildId);
+
+      if (guild) {
+        setComposeChannel({ guildId: guild._id, type: "guild" });
+      }
+      return;
+    }
+
+    if (channelKey.startsWith("whisper:")) {
+      const recipientId = channelKey.replace("whisper:", "");
+      const user = users.find((user) => user.accountId === recipientId);
+
+      if (user) {
+        setComposeChannel({
+          recipientDisplayName: user.displayName,
+          recipientId: user.accountId,
+          type: "whisper",
+        });
+      }
+    }
+  }
+
+  function getMessageChannelLabel(message: (typeof messages)[number]) {
+    if (message.channelType === "global") {
+      return t.globalChat;
+    }
+
+    if (message.channelType === "guild") {
+      return guilds.find((guild) => guild._id === message.guildId)?.name ?? t.guilds;
+    }
+
+    return t.whisper;
   }
 
   function handlePlayerMenuOpen(event: MouseEvent<HTMLButtonElement>, user: ChatUser) {
@@ -383,6 +470,34 @@ export default function Home() {
         </Paper>
 
         <List aria-label={t.conversations} disablePadding sx={{ display: "grid", gap: 1.25 }}>
+          <ListItemButton
+            disabled={!isAuthenticated}
+            onClick={() => handleChannelChange({ type: "open" })}
+            selected={isAuthenticated && activeChannel.type === "open"}
+            sx={{
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              borderRadius: 1,
+              color: "inherit",
+              display: "grid",
+              gap: 0.5,
+              "&.Mui-selected": {
+                bgcolor: "rgba(255, 255, 255, 0.08)",
+              },
+              "&.Mui-selected:hover": {
+                bgcolor: "rgba(255, 255, 255, 0.12)",
+              },
+            }}
+          >
+            <ListItemText
+              primary={renderChannelPrimary(t.openChat, { type: "open" })}
+              secondary={t.conversations}
+              slotProps={{
+                primary: { sx: { fontWeight: 700 } },
+                secondary: { sx: { color: "#b7c3cf", fontSize: "0.85rem" } },
+              }}
+            />
+          </ListItemButton>
+
           <ListItemButton
             disabled={!isAuthenticated}
             onClick={() => handleChannelChange({ type: "global" })}
@@ -645,6 +760,21 @@ export default function Home() {
                       }}
                     >
                       <Box component="span" sx={{ alignItems: "center", display: "inline-flex", gap: 0.75, minWidth: 0 }}>
+                        {activeChannel.type === "open" ? (
+                          <Chip
+                            label={getMessageChannelLabel(message)}
+                            size="small"
+                            sx={{
+                              bgcolor:
+                                message.channelType === "guild" ? "#fff3df" : message.channelType === "whisper" ? "#eef4ff" : "#eafaf5",
+                              color: message.channelType === "guild" ? "#7c3f0b" : message.channelType === "whisper" ? "#1d4ed8" : "#0f5f59",
+                              flex: "0 0 auto",
+                              fontSize: "0.68rem",
+                              fontWeight: 700,
+                              height: 22,
+                            }}
+                          />
+                        ) : null}
                         <Box
                           component="span"
                           sx={{
@@ -694,7 +824,7 @@ export default function Home() {
             </Box>
 
             <Box component="form" onSubmit={handleSubmit}>
-              <Divider sx={{ borderColor: channelAppearance.messageBorder, mb: 2.5 }} />
+              <Divider sx={{ borderColor: composeAppearance.messageBorder, mb: 2.5 }} />
               <Box
                 sx={{
                   display: "flex",
@@ -702,6 +832,44 @@ export default function Home() {
                   gap: 1.25,
                 }}
               >
+                {activeChannel.type === "open" ? (
+                  <FormControl sx={{ minWidth: { sm: 180 } }}>
+                    <InputLabel id="compose-channel-label" sx={{ color: composeAppearance.accent, "&.Mui-focused": { color: composeAppearance.accent } }}>
+                      {t.sendTo}
+                    </InputLabel>
+                    <Select
+                      label={t.sendTo}
+                      labelId="compose-channel-label"
+                      onChange={handleComposeChannelChange}
+                      sx={{
+                        color: composeAppearance.accent,
+                        fontWeight: 700,
+                        "& .MuiOutlinedInput-notchedOutline": {
+                          borderColor: composeAppearance.messageBorder,
+                        },
+                        "&:hover .MuiOutlinedInput-notchedOutline": {
+                          borderColor: composeAppearance.accent,
+                        },
+                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                          borderColor: composeAppearance.accent,
+                        },
+                      }}
+                      value={getComposeChannelValue(composeChannel)}
+                    >
+                      <MenuItem value="global">{t.globalChat}</MenuItem>
+                      {guilds.map((guild) => (
+                        <MenuItem key={guild._id} value={`guild:${guild._id}`}>
+                          {guild.name}
+                        </MenuItem>
+                      ))}
+                      {users.map((user) => (
+                        <MenuItem key={user.accountId} value={`whisper:${user.accountId}`}>
+                          {t.whisper}: {user.displayName}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                ) : null}
                 <TextField
                   fullWidth
                   id="message"
@@ -710,11 +878,23 @@ export default function Home() {
                   onChange={(event) => setDraft(event.target.value)}
                   placeholder={t.typeMessage}
                   sx={{
+                    "& .MuiOutlinedInput-input": {
+                      color: composeAppearance.accent,
+                    },
+                    "& .MuiOutlinedInput-root fieldset": {
+                      borderColor: composeAppearance.messageBorder,
+                    },
+                    "& .MuiOutlinedInput-root:hover fieldset": {
+                      borderColor: composeAppearance.accent,
+                    },
                     "& .MuiOutlinedInput-root.Mui-focused fieldset": {
-                      borderColor: channelAppearance.accent,
+                      borderColor: composeAppearance.accent,
+                    },
+                    "& .MuiInputLabel-root": {
+                      color: composeAppearance.accent,
                     },
                     "& .MuiInputLabel-root.Mui-focused": {
-                      color: channelAppearance.accent,
+                      color: composeAppearance.accent,
                     },
                   }}
                   value={draft}
@@ -722,10 +902,10 @@ export default function Home() {
                 <Button
                   disabled={connectionStatus !== "connected"}
                   sx={{
-                    bgcolor: channelAppearance.accent,
+                    bgcolor: composeAppearance.accent,
                     minWidth: { sm: 120 },
                     "&:hover": {
-                      bgcolor: channelAppearance.badgeColor,
+                      bgcolor: composeAppearance.badgeColor,
                     },
                   }}
                   type="submit"

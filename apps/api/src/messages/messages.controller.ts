@@ -8,6 +8,11 @@ import { MessagesService } from "./messages.service";
 export class MessagesController {
   constructor(private readonly messagesService: MessagesService) {}
 
+  @Get("open")
+  getOpenMessages(@Req() request: AuthenticatedRequest, @Query("limit") limit?: string) {
+    return this.messagesService.getOpenMessages(request.user.accountId, Number(limit) || 100);
+  }
+
   @Get("global")
   getGlobalMessages(@Query("limit") limit?: string) {
     return this.messagesService.getGlobalMessages(Number(limit) || 50);

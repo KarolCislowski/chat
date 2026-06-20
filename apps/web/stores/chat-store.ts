@@ -21,6 +21,7 @@ export type ChatChannel =
       recipientId: string;
       type: "whisper";
     };
+export type ChatView = ChatChannel | { type: "open" };
 export type OnlineStatus = "offline" | "online" | "away" | "busy";
 
 export type Message = {
@@ -48,7 +49,8 @@ type PresenceChangedEvent = {
 };
 
 type ChatState = {
-  activeChannel: ChatChannel;
+  activeChannel: ChatView;
+  composeChannel: ChatChannel;
   connectionError: string | null;
   connectionStatus: ChatConnectionStatus;
   currentAccountId: string | null;
@@ -62,7 +64,8 @@ type ChatState = {
   loadHealth: (apiBaseUrl: string) => Promise<void>;
   loadMessages: (apiBaseUrl: string, accessToken: string) => Promise<void>;
   sendMessage: (content: string) => void;
-  setActiveChannel: (channel: ChatChannel) => void;
+  setActiveChannel: (channel: ChatView) => void;
+  setComposeChannel: (channel: ChatChannel) => void;
   setCurrentAccountId: (accountId: string | null) => void;
   setDraft: (draft: string) => void;
 };
@@ -77,7 +80,11 @@ function upsertMessage(messages: Message[], message: Message) {
   return [...messages, message].sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
 }
 
-function isMessageForChannel(message: Message, channel: ChatChannel) {
+function isMessageForChannel(message: Message, channel: ChatView) {
+  if (channel.type === "open") {
+    return true;
+  }
+
   if (channel.type === "global") {
     return message.channelType === "global";
   }
@@ -89,7 +96,11 @@ function isMessageForChannel(message: Message, channel: ChatChannel) {
   return message.channelType === "guild" && message.guildId === channel.guildId;
 }
 
-export function getChatChannelKey(channel: ChatChannel) {
+export function getChatChannelKey(channel: ChatView) {
+  if (channel.type === "open") {
+    return "open";
+  }
+
   if (channel.type === "global") {
     return "global";
   }
@@ -118,7 +129,11 @@ function getMessageChannelKey(message: Message, currentAccountId: string | null)
   return null;
 }
 
-function clearUnread(unreadByChannel: Record<string, number>, channel: ChatChannel) {
+function clearUnread(unreadByChannel: Record<string, number>, channel: ChatView) {
+  if (channel.type === "open") {
+    return {};
+  }
+
   const channelKey = getChatChannelKey(channel);
 
   if (!unreadByChannel[channelKey]) {
@@ -138,7 +153,8 @@ async function getErrorMessage(response: Response) {
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
-  activeChannel: { type: "global" },
+  activeChannel: { type: "open" },
+  composeChannel: { type: "global" },
   connectionError: null,
   connectionStatus: "disconnected",
   currentAccountId: null,
@@ -224,7 +240,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   loadMessages: async (apiBaseUrl, accessToken) => {
     const channel = get().activeChannel;
     const path =
-      channel.type === "global"
+      channel.type === "open"
+        ? "/messages/open"
+        : channel.type === "global"
         ? "/messages/global"
         : channel.type === "guild"
           ? `/messages/guild/${channel.guildId}`
@@ -273,7 +291,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
   sendMessage: (content) => {
     const text = content.trim();
-    const channel = get().activeChannel;
+    const channel = get().composeChannel;
 
     if (!text || !socket?.connected) {
       if (text) {
@@ -295,11 +313,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
   setActiveChannel: (channel) =>
     set((state) => ({
       activeChannel: channel,
+      composeChannel: channel.type === "open" ? state.composeChannel : channel,
       connectionError: null,
       draft: "",
       messages: [],
       unreadByChannel: clearUnread(state.unreadByChannel, channel),
     })),
+  setComposeChannel: (channel) => set({ composeChannel: channel }),
   setCurrentAccountId: (accountId) => set({ currentAccountId: accountId }),
   setDraft: (draft) => set({ draft }),
 }));

@@ -9,6 +9,7 @@ import { Message, MessageDocument } from "./schemas/message.schema";
 const GLOBAL_MESSAGE_LIMIT = 200;
 const GUILD_MESSAGE_LIMIT = 200;
 const WHISPER_MESSAGE_LIMIT = 100;
+const OPEN_MESSAGE_LIMIT = 200;
 const MESSAGE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30;
 
 type CreateGlobalMessageInput = {
@@ -105,6 +106,36 @@ export class MessagesService {
 
     const safeLimit = Math.min(Math.max(limit, 1), GLOBAL_MESSAGE_LIMIT);
     const messages = await this.messageModel.find({ channelType: "global", deletedAt: null }).sort({ createdAt: -1 }).limit(safeLimit).exec();
+
+    const orderedMessages = messages.reverse();
+    const senderIds = [...new Set(orderedMessages.map((message) => message.senderId.toString()))];
+    const profiles = await this.profileModel.find({ accountId: { $in: senderIds } }).exec();
+    const sendersByAccountId = new Map(profiles.map((profile) => [profile.accountId.toString(), this.toSenderResponse(profile)]));
+
+    return orderedMessages.map((message) => this.toMessageResponse(message, sendersByAccountId.get(message.senderId.toString()) ?? null));
+  }
+
+  async getOpenMessages(accountId: string, limit = 100) {
+    await this.deleteExpiredMessages();
+
+    const safeLimit = Math.min(Math.max(limit, 1), OPEN_MESSAGE_LIMIT);
+    const objectAccountId = new Types.ObjectId(accountId);
+    const guildIds = (await this.guildsService.getGuildIdsForUser(accountId)).map((guildId) => new Types.ObjectId(guildId));
+    const messages = await this.messageModel
+      .find({
+        deletedAt: null,
+        $or: [
+          { channelType: "global" },
+          { channelType: "guild", guildId: { $in: guildIds } },
+          {
+            channelType: "whisper",
+            $or: [{ senderId: objectAccountId }, { recipientId: objectAccountId }],
+          },
+        ],
+      })
+      .sort({ createdAt: -1 })
+      .limit(safeLimit)
+      .exec();
 
     const orderedMessages = messages.reverse();
     const senderIds = [...new Set(orderedMessages.map((message) => message.senderId.toString()))];
