@@ -69,6 +69,11 @@ export default function Home() {
   const language = useLanguageStore((state) => state.language);
   const setLanguage = useLanguageStore((state) => state.setLanguage);
   const t = useLanguageStore((state) => state.t);
+  const languageFlags: Record<UiLanguage, string> = {
+    en: "🇬🇧",
+    pl: "🇵🇱",
+    sv: "🇸🇪",
+  };
 
   useEffect(() => {
     void loadHealth(apiBaseUrl);
@@ -100,52 +105,52 @@ export default function Home() {
   const channelAppearance = useMemo(() => {
     if (activeChannel.type === "open") {
       return {
-        accent: "#475569",
-        badgeBg: "#f1f5f9",
-        badgeColor: "#334155",
+        accent: "#60a5fa",
+        badgeBg: "rgba(96, 165, 250, 0.16)",
+        badgeColor: "#bfdbfe",
         label: t.openChat,
-        messageBg: "#f8fafc",
-        messageBorder: "rgba(71, 85, 105, 0.24)",
-        pageBg: "#f8fafc",
-        softBg: "rgba(71, 85, 105, 0.08)",
+        messageBg: "rgba(96, 165, 250, 0.13)",
+        messageBorder: "rgba(96, 165, 250, 0.34)",
+        pageBg: "rgba(4, 15, 28, 0.72)",
+        softBg: "rgba(96, 165, 250, 0.08)",
       };
     }
 
     if (activeChannel.type === "guild") {
       return {
-        accent: "#b56a1f",
-        badgeBg: "#fff3df",
-        badgeColor: "#7c3f0b",
+        accent: "#f0b35f",
+        badgeBg: "rgba(240, 179, 95, 0.15)",
+        badgeColor: "#ffd9a3",
         label: t.guilds,
-        messageBg: "#fff7ed",
-        messageBorder: "rgba(181, 106, 31, 0.32)",
-        pageBg: "#fffaf3",
-        softBg: "rgba(181, 106, 31, 0.08)",
+        messageBg: "rgba(240, 179, 95, 0.13)",
+        messageBorder: "rgba(240, 179, 95, 0.34)",
+        pageBg: "rgba(12, 17, 26, 0.78)",
+        softBg: "rgba(240, 179, 95, 0.09)",
       };
     }
 
     if (activeChannel.type === "whisper") {
       return {
-        accent: "#2563eb",
-        badgeBg: "#eef4ff",
-        badgeColor: "#1d4ed8",
+        accent: "#7dd3fc",
+        badgeBg: "rgba(125, 211, 252, 0.15)",
+        badgeColor: "#bae6fd",
         label: t.whisper,
-        messageBg: "#eff6ff",
-        messageBorder: "rgba(37, 99, 235, 0.28)",
-        pageBg: "#f7fbff",
-        softBg: "rgba(37, 99, 235, 0.08)",
+        messageBg: "rgba(125, 211, 252, 0.12)",
+        messageBorder: "rgba(125, 211, 252, 0.32)",
+        pageBg: "rgba(4, 18, 32, 0.78)",
+        softBg: "rgba(125, 211, 252, 0.08)",
       };
     }
 
     return {
-      accent: "#0f766e",
-      badgeBg: "#eafaf5",
-      badgeColor: "#0f5f59",
+      accent: "#4ade80",
+      badgeBg: "rgba(74, 222, 128, 0.14)",
+      badgeColor: "#bbf7d0",
       label: t.globalChat,
-      messageBg: "#eef8f5",
-      messageBorder: "rgba(20, 108, 95, 0.24)",
-      pageBg: "#f7fbf9",
-      softBg: "rgba(15, 118, 110, 0.08)",
+      messageBg: "rgba(74, 222, 128, 0.11)",
+      messageBorder: "rgba(74, 222, 128, 0.3)",
+      pageBg: "rgba(3, 22, 20, 0.72)",
+      softBg: "rgba(74, 222, 128, 0.07)",
     };
   }, [activeChannel.type, t.globalChat, t.guilds, t.openChat, t.whisper]);
   const composeAppearance = useMemo(() => {
@@ -173,6 +178,7 @@ export default function Home() {
   }, [composeChannel.type]);
   const manageableGuilds = useMemo(() => guilds.filter((guild) => ["owner", "officer"].includes(guild.membership.role ?? "")), [guilds]);
   const onlineUsers = useMemo(() => users.filter((user) => user.onlineStatus !== "offline"), [users]);
+  const [accountMenuAnchor, setAccountMenuAnchor] = useState<HTMLElement | null>(null);
   const [playerMenuAnchor, setPlayerMenuAnchor] = useState<HTMLElement | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<ChatUser | null>(null);
 
@@ -308,6 +314,14 @@ export default function Home() {
     setPlayerMenuAnchor(event.currentTarget);
   }
 
+  function handleAccountMenuOpen(event: MouseEvent<HTMLButtonElement>) {
+    setAccountMenuAnchor(event.currentTarget);
+  }
+
+  function handleAccountMenuClose() {
+    setAccountMenuAnchor(null);
+  }
+
   function handlePlayerMenuClose() {
     setPlayerMenuAnchor(null);
     setSelectedPlayer(null);
@@ -361,6 +375,58 @@ export default function Home() {
     );
   }
 
+  function renderRailPrimary(label: string, channel: Parameters<typeof setActiveChannel>[0], icon: string, iconColor = "#60a5fa") {
+    return (
+      <Box component="span" sx={{ alignItems: "center", display: "flex", gap: 1.4, minWidth: 0 }}>
+        <Box
+          component="span"
+          sx={{
+            alignItems: "center",
+            bgcolor: "rgba(2, 8, 18, 0.34)",
+            border: `1px solid ${iconColor}66`,
+            color: iconColor,
+            display: "flex",
+            flex: "0 0 auto",
+            fontSize: "0.9rem",
+            fontWeight: 800,
+            height: 34,
+            justifyContent: "center",
+            width: 34,
+          }}
+        >
+          {icon}
+        </Box>
+        {renderChannelPrimary(label, channel)}
+      </Box>
+    );
+  }
+
+  function railItemSx(isSelected: boolean, accent = "#60a5fa") {
+    return {
+      border: "1px solid transparent",
+      borderLeft: `3px solid ${isSelected ? accent : "transparent"}`,
+      borderRadius: 1,
+      color: "inherit",
+      display: "grid",
+      gap: 0.35,
+      minHeight: 54,
+      px: 1.3,
+      py: 0.85,
+      transition: "background-color 140ms ease, border-color 140ms ease",
+      "&:hover": {
+        bgcolor: "rgba(96, 165, 250, 0.07)",
+      },
+      "&.Mui-selected": {
+        background: "linear-gradient(90deg, rgba(37, 99, 235, 0.22), rgba(37, 99, 235, 0.04))",
+        borderColor: "rgba(96, 165, 250, 0.22)",
+        borderLeftColor: accent,
+      },
+      "&.Mui-selected:hover": {
+        bgcolor: "rgba(37, 99, 235, 0.16)",
+      },
+    };
+  }
+
   function handleLanguageChange(event: SelectChangeEvent<UiLanguage>) {
     const nextLanguage = event.target.value as UiLanguage;
     setLanguage(nextLanguage);
@@ -374,22 +440,197 @@ export default function Home() {
     <Box
       component="main"
       sx={{
-        bgcolor: "background.default",
+        background:
+          "radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.22), transparent 34%), linear-gradient(135deg, #04101d 0%, #071827 52%, #020812 100%)",
+        color: "#e5edf7",
         display: "grid",
-        gridTemplateColumns: { xs: "1fr", md: "minmax(240px, 320px) minmax(0, 1fr)" },
-        minHeight: "100vh",
+        gridTemplateColumns: { xs: "1fr", lg: "320px minmax(0, 1fr) 320px" },
+        gridTemplateRows: { xs: "auto auto auto auto", lg: "92px minmax(0, 1fr)" },
+        height: "100vh",
+        overflow: "hidden",
       }}
     >
+      <Box
+        component="header"
+        sx={{
+          alignItems: "center",
+          backdropFilter: "blur(18px)",
+          bgcolor: "rgba(3, 10, 20, 0.76)",
+          borderBottom: "1px solid rgba(96, 165, 250, 0.18)",
+          display: "grid",
+          gridColumn: { xs: "1", lg: "1 / 4" },
+          gridTemplateColumns: { xs: "1fr", md: "280px minmax(0, 1fr) auto" },
+          minHeight: 92,
+          px: { xs: 2.5, md: 4 },
+        }}
+      >
+        <Box sx={{ alignItems: "center", display: "flex", gap: 2 }}>
+          <Box
+            sx={{
+              alignItems: "center",
+              border: "1px solid rgba(240, 179, 95, 0.68)",
+              color: "#f0b35f",
+              display: "flex",
+              fontSize: "1.35rem",
+              fontWeight: 800,
+              height: 46,
+              justifyContent: "center",
+              width: 38,
+            }}
+          >
+            DS
+          </Box>
+          <Box>
+            <Typography sx={{ fontSize: "1.35rem", fontWeight: 800, letterSpacing: 1.4, lineHeight: 1 }}>
+              Dworven Shaft
+            </Typography>
+            <Typography sx={{ color: "#8ca3ba", fontSize: "0.78rem", letterSpacing: 2, mt: 0.4 }}>
+              {t.socialHub}
+            </Typography>
+          </Box>
+        </Box>
+
+        <Box sx={{ display: { xs: "none", md: "flex" }, justifyContent: "center", minHeight: 92 }}>
+          {[
+            { href: null, key: "play", label: t.play },
+            { href: null, key: "social", label: t.social },
+            { href: "/profile", key: "profile", label: t.profile },
+            { href: "/guilds", key: "guild", label: t.guilds },
+            { href: null, key: "shop", label: t.shop },
+          ].map((item) => (
+            <Box
+              component={item.href ? Link : "span"}
+              href={item.href ?? undefined}
+              key={item.key}
+              sx={{
+                alignItems: "center",
+                borderBottom: item.key === "social" ? "2px solid #60a5fa" : "2px solid transparent",
+                boxShadow: item.key === "social" ? "inset 0 -18px 24px rgba(96, 165, 250, 0.16)" : "none",
+                color: item.key === "social" ? "#f8fbff" : "#9badbf",
+                display: "flex",
+                fontWeight: 700,
+                letterSpacing: 1.3,
+                px: 3,
+                textDecoration: "none",
+                textTransform: "uppercase",
+              }}
+            >
+              {item.label}
+            </Box>
+          ))}
+        </Box>
+
+        <Box sx={{ alignItems: "center", display: "flex", gap: 2, justifyContent: { xs: "flex-start", md: "flex-end" }, py: { xs: 2, md: 0 } }}>
+          <FormControl size="small" sx={{ minWidth: 82 }}>
+            <Select
+              aria-label={t.language}
+              onChange={handleLanguageChange}
+              renderValue={(value) => {
+                const languageCode = value as UiLanguage;
+                return `${languageFlags[languageCode]} ${languageCode.toUpperCase()}`;
+              }}
+              sx={{
+                bgcolor: "rgba(2, 8, 18, 0.32)",
+                color: "#c7d5e6",
+                fontSize: "0.82rem",
+                fontWeight: 800,
+                height: 36,
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "rgba(148, 163, 184, 0.18)",
+                },
+                "&:hover .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "rgba(96, 165, 250, 0.36)",
+                },
+                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "rgba(96, 165, 250, 0.64)",
+                },
+              }}
+              value={language}
+            >
+              {(Object.keys(languageLabels) as UiLanguage[]).map((languageCode) => (
+                <MenuItem key={languageCode} value={languageCode}>
+                  {languageFlags[languageCode]} {languageCode.toUpperCase()}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Chip label={connectionStatus} size="small" sx={{ bgcolor: "rgba(96, 165, 250, 0.16)", color: "#bfdbfe", fontWeight: 700 }} />
+          {isAuthenticated ? (
+            <>
+              <Button
+                aria-controls={accountMenuAnchor ? "account-menu" : undefined}
+                aria-haspopup="true"
+                onClick={handleAccountMenuOpen}
+                sx={{
+                  borderRadius: 1,
+                  color: "#e5edf7",
+                  gap: 1.25,
+                  justifyContent: "flex-start",
+                  px: 1,
+                  py: 0.75,
+                  textTransform: "none",
+                }}
+                type="button"
+              >
+                <Box sx={{ bgcolor: "#132337", border: "1px solid rgba(96, 165, 250, 0.35)", borderRadius: "50%", height: 44, width: 44 }} />
+                <Box sx={{ textAlign: "left" }}>
+                  <Typography sx={{ fontWeight: 800, lineHeight: 1 }}>{profile?.displayName ?? "Player"}</Typography>
+                  <Typography sx={{ color: "#78d88f", fontSize: "0.8rem" }}>{profile?.onlineStatus ?? "offline"}</Typography>
+                </Box>
+              </Button>
+              <Menu
+                anchorEl={accountMenuAnchor}
+                id="account-menu"
+                onClose={handleAccountMenuClose}
+                open={Boolean(accountMenuAnchor)}
+                slotProps={{
+                  paper: {
+                    sx: {
+                      bgcolor: "#081827",
+                      border: "1px solid rgba(96, 165, 250, 0.22)",
+                      color: "#e5edf7",
+                      minWidth: 180,
+                    },
+                  },
+                }}
+              >
+                <MenuItem component={Link} href="/profile" onClick={handleAccountMenuClose}>
+                  {t.profile}
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    handleAccountMenuClose();
+                    void logout(apiBaseUrl);
+                  }}
+                >
+                  {t.logout}
+                </MenuItem>
+              </Menu>
+            </>
+          ) : (
+            <Button component={Link} href="/auth" size="small" sx={{ color: "#bfdbfe", borderColor: "rgba(96, 165, 250, 0.28)" }} variant="outlined">
+              {t.login}
+            </Button>
+          )}
+        </Box>
+      </Box>
+
       <Box
         component="aside"
         aria-label={t.conversations}
         sx={{
-          bgcolor: "#202832",
+          background:
+            "linear-gradient(180deg, rgba(3, 10, 20, 0.82), rgba(3, 10, 20, 0.68)), radial-gradient(circle at 50% 100%, rgba(37, 99, 235, 0.16), transparent 42%)",
+          borderRight: { lg: "1px solid rgba(96, 165, 250, 0.16)" },
           color: "#f8fafc",
           display: "flex",
           flexDirection: "column",
-          gap: 3,
-          p: { xs: 2.5, md: 3.5 },
+          gap: 2.25,
+          gridColumn: { xs: "1", lg: "1" },
+          gridRow: { xs: "2", lg: "2" },
+          minHeight: 0,
+          overflowY: "auto",
+          p: { xs: 2.5, md: 2.25 },
         }}
       >
         <Box>
@@ -401,95 +642,30 @@ export default function Home() {
           </Typography>
         </Box>
 
-        <FormControl fullWidth size="small">
-          <InputLabel id="language-label" sx={{ color: "#d9e2ea" }}>
-            {t.language}
-          </InputLabel>
-          <Select
-            label={t.language}
-            labelId="language-label"
-            onChange={handleLanguageChange}
-            sx={{ color: "#fff" }}
-            value={language}
+        <List aria-label={t.conversations} disablePadding sx={{ display: "grid", gap: 0.45 }}>
+          <Typography
+            sx={{
+              borderBottom: "1px solid rgba(148, 163, 184, 0.14)",
+              color: "#aab9ca",
+              fontSize: "0.74rem",
+              fontWeight: 800,
+              letterSpacing: 1.4,
+              mb: 1,
+              pb: 1,
+              textTransform: "uppercase",
+            }}
           >
-            {(Object.keys(languageLabels) as UiLanguage[]).map((languageCode) => (
-              <MenuItem key={languageCode} value={languageCode}>
-                {languageLabels[languageCode]}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+            Channels
+          </Typography>
 
-        <Button color="primary" disabled={!isAuthenticated} fullWidth type="button" variant="contained">
-          {t.newChat}
-        </Button>
-
-        <Paper
-          component="section"
-          elevation={0}
-          sx={{
-            bgcolor: "rgba(255, 255, 255, 0.08)",
-            border: "1px solid rgba(255, 255, 255, 0.12)",
-            color: "inherit",
-            p: 2,
-          }}
-          variant="outlined"
-        >
-          {profile ? (
-            <Box sx={{ display: "grid", gap: 1.5 }}>
-              <Box>
-                <Typography sx={{ color: "#8aa3b5", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase" }}>
-                  {t.profile}
-                </Typography>
-                <Typography sx={{ fontWeight: 700 }}>{profile.displayName}</Typography>
-                <Typography sx={{ color: "#b7c3cf", fontSize: "0.85rem" }}>{profile.onlineStatus}</Typography>
-              </Box>
-              <Button color="inherit" component={Link} href="/profile" type="button" variant="contained">
-                {t.profile}
-              </Button>
-              <Button color="inherit" component={Link} href="/guilds" type="button" variant="outlined">
-                {t.guilds}
-              </Button>
-              <Button color="inherit" onClick={() => void logout(apiBaseUrl)} type="button" variant="outlined">
-                {t.logout}
-              </Button>
-            </Box>
-          ) : (
-            <Box sx={{ display: "grid", gap: 1.5 }}>
-              <Box>
-                <Typography sx={{ color: "#8aa3b5", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase" }}>
-                  {t.profile}
-                </Typography>
-                <Typography sx={{ color: "#b7c3cf", fontSize: "0.9rem" }}>{t.conversationRequiresLogin}</Typography>
-              </Box>
-              <Button color="inherit" component={Link} href="/auth" type="button" variant="contained">
-                {t.login}
-              </Button>
-            </Box>
-          )}
-        </Paper>
-
-        <List aria-label={t.conversations} disablePadding sx={{ display: "grid", gap: 1.25 }}>
           <ListItemButton
             disabled={!isAuthenticated}
             onClick={() => handleChannelChange({ type: "open" })}
             selected={isAuthenticated && activeChannel.type === "open"}
-            sx={{
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              borderRadius: 1,
-              color: "inherit",
-              display: "grid",
-              gap: 0.5,
-              "&.Mui-selected": {
-                bgcolor: "rgba(255, 255, 255, 0.08)",
-              },
-              "&.Mui-selected:hover": {
-                bgcolor: "rgba(255, 255, 255, 0.12)",
-              },
-            }}
+            sx={railItemSx(isAuthenticated && activeChannel.type === "open", "#60a5fa")}
           >
             <ListItemText
-              primary={renderChannelPrimary(t.openChat, { type: "open" })}
+              primary={renderRailPrimary(t.openChat, { type: "open" }, "O", "#60a5fa")}
               secondary={t.conversations}
               slotProps={{
                 primary: { sx: { fontWeight: 700 } },
@@ -502,22 +678,10 @@ export default function Home() {
             disabled={!isAuthenticated}
             onClick={() => handleChannelChange({ type: "global" })}
             selected={isAuthenticated && activeChannel.type === "global"}
-            sx={{
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              borderRadius: 1,
-              color: "inherit",
-              display: "grid",
-              gap: 0.5,
-              "&.Mui-selected": {
-                bgcolor: "rgba(255, 255, 255, 0.08)",
-              },
-              "&.Mui-selected:hover": {
-                bgcolor: "rgba(255, 255, 255, 0.12)",
-              },
-            }}
+            sx={railItemSx(isAuthenticated && activeChannel.type === "global", "#4ade80")}
           >
             <ListItemText
-              primary={renderChannelPrimary(t.globalChat, { type: "global" })}
+              primary={renderRailPrimary(t.globalChat, { type: "global" }, "◎", "#4ade80")}
               secondary={isAuthenticated ? t.local : t.conversationRequiresLogin}
               slotProps={{
                 primary: { sx: { fontWeight: 700 } },
@@ -526,29 +690,34 @@ export default function Home() {
             />
           </ListItemButton>
 
+          <Box sx={{ alignItems: "center", borderBottom: "1px solid rgba(148, 163, 184, 0.14)", display: "flex", justifyContent: "space-between", mb: 1, mt: 2.2, pb: 1 }}>
+            <Typography
+              sx={{
+                color: "#aab9ca",
+                fontSize: "0.74rem",
+                fontWeight: 800,
+                letterSpacing: 1.4,
+                textTransform: "uppercase",
+              }}
+            >
+              {t.guilds}
+            </Typography>
+            <IconButton component={Link} href="/guilds" size="small" sx={{ bgcolor: "rgba(96, 165, 250, 0.1)", color: "#bfdbfe", height: 28, width: 28 }}>
+              +
+            </IconButton>
+          </Box>
+
           {guilds.map((guild) => (
             <ListItemButton
               disabled={!isAuthenticated}
               key={guild._id}
               onClick={() => handleChannelChange({ guildId: guild._id, type: "guild" })}
               selected={activeChannel.type === "guild" && activeChannel.guildId === guild._id}
-              sx={{
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                borderRadius: 1,
-                color: "inherit",
-                display: "grid",
-                gap: 0.5,
-                "&.Mui-selected": {
-                  bgcolor: "rgba(255, 255, 255, 0.08)",
-                },
-                "&.Mui-selected:hover": {
-                  bgcolor: "rgba(255, 255, 255, 0.12)",
-                },
-              }}
+              sx={railItemSx(activeChannel.type === "guild" && activeChannel.guildId === guild._id, "#f0b35f")}
             >
               <ListItemText
-                primary={renderChannelPrimary(guild.name, { guildId: guild._id, type: "guild" })}
-                secondary={t.guilds}
+                primary={renderRailPrimary(guild.name, { guildId: guild._id, type: "guild" }, "♜", "#f0b35f")}
+                secondary={`${guild.members.length} members`}
                 slotProps={{
                   primary: { sx: { fontWeight: 700 } },
                   secondary: { sx: { color: "#b7c3cf", fontSize: "0.85rem" } },
@@ -557,39 +726,39 @@ export default function Home() {
             </ListItemButton>
           ))}
 
-          <Typography color="#8aa3b5" sx={{ fontSize: "0.75rem", fontWeight: 700, pt: 1, textTransform: "uppercase" }}>
-            {t.onlinePlayers}
+          <Typography
+            sx={{
+              borderBottom: "1px solid rgba(148, 163, 184, 0.14)",
+              color: "#aab9ca",
+              fontSize: "0.74rem",
+              fontWeight: 800,
+              letterSpacing: 1.4,
+              mb: 1,
+              mt: 2.2,
+              pb: 1,
+              textTransform: "uppercase",
+            }}
+          >
+            {t.whisper}
           </Typography>
 
-          {onlineUsers.length > 0 ? (
-            onlineUsers.map((user) => (
+          {users.length > 0 ? (
+            users.map((user) => (
               <ListItemButton
                 disabled={!isAuthenticated}
                 key={user.accountId}
                 onClick={() => startWhisper(user)}
                 selected={activeChannel.type === "whisper" && activeChannel.recipientId === user.accountId}
-                sx={{
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
-                  borderRadius: 1,
-                  color: "inherit",
-                  display: "grid",
-                  gap: 0.5,
-                  "&.Mui-selected": {
-                    bgcolor: "rgba(255, 255, 255, 0.08)",
-                  },
-                  "&.Mui-selected:hover": {
-                    bgcolor: "rgba(255, 255, 255, 0.12)",
-                  },
-                }}
+                sx={railItemSx(activeChannel.type === "whisper" && activeChannel.recipientId === user.accountId, "#7dd3fc")}
               >
                 <ListItemText
                   primary={
                     <Box component="span" sx={{ alignItems: "center", display: "flex", gap: 1, justifyContent: "space-between", minWidth: 0 }}>
-                      {renderChannelPrimary(user.displayName, {
+                      {renderRailPrimary(user.displayName, {
                         recipientDisplayName: user.displayName,
                         recipientId: user.accountId,
                         type: "whisper",
-                      })}
+                      }, "●", "#7dd3fc")}
                       <IconButton
                         aria-label={`${user.displayName} menu`}
                         color="inherit"
@@ -613,10 +782,23 @@ export default function Home() {
               </ListItemButton>
             ))
           ) : (
-            <Typography sx={{ color: "#b7c3cf", fontSize: "0.85rem" }}>{t.noOnlinePlayers}</Typography>
+            <Typography sx={{ color: "#b7c3cf", fontSize: "0.85rem" }}>{t.noUsers}</Typography>
           )}
 
-          <Menu anchorEl={playerMenuAnchor} onClose={handlePlayerMenuClose} open={Boolean(playerMenuAnchor)}>
+          <Menu
+            anchorEl={playerMenuAnchor}
+            onClose={handlePlayerMenuClose}
+            open={Boolean(playerMenuAnchor)}
+            slotProps={{
+              paper: {
+                sx: {
+                  bgcolor: "#081827",
+                  border: "1px solid rgba(96, 165, 250, 0.22)",
+                  color: "#e5edf7",
+                },
+              },
+            }}
+          >
             {selectedPlayer ? <MenuItem onClick={() => startWhisper(selectedPlayer)}>{t.startWhisper}</MenuItem> : null}
             {selectedPlayer
               ? manageableGuilds
@@ -629,25 +811,28 @@ export default function Home() {
               : null}
           </Menu>
 
-          <ListItemButton
-            component="a"
-            href="#api"
-            sx={{
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-              borderRadius: 1,
-              color: "inherit",
-            }}
-          >
-            <ListItemText
-              primary={t.apiTitle}
-              secondary={apiStatus}
-              slotProps={{
-                primary: { sx: { fontWeight: 700 } },
-                secondary: { sx: { color: "#b7c3cf", fontSize: "0.85rem" } },
-              }}
-            />
-          </ListItemButton>
         </List>
+
+        <Box sx={{ flex: 1, minHeight: 28 }} />
+
+        <Button
+          component={Link}
+          href="/guilds"
+          sx={{
+            borderColor: "rgba(96, 165, 250, 0.55)",
+            color: "#7dd3fc",
+            fontWeight: 800,
+            letterSpacing: 0.5,
+            py: 1.2,
+            "&:hover": {
+              borderColor: "#60a5fa",
+              bgcolor: "rgba(96, 165, 250, 0.1)",
+            },
+          }}
+          variant="outlined"
+        >
+          + {t.createGuild}
+        </Button>
       </Box>
 
       <Box
@@ -656,9 +841,13 @@ export default function Home() {
         aria-label={activeChannelTitle}
         sx={{
           bgcolor: channelAppearance.pageBg,
+          borderLeft: "1px solid rgba(96, 165, 250, 0.08)",
+          borderRight: { lg: "1px solid rgba(96, 165, 250, 0.08)" },
           display: "grid",
+          gridColumn: { xs: "1", lg: "2" },
+          gridRow: { xs: "3", lg: "2" },
           gridTemplateRows: "auto minmax(0, 1fr) auto",
-          minHeight: { xs: "70vh", md: "100vh" },
+          minHeight: 0,
           minWidth: 0,
           p: { xs: 2.5, md: 4 },
         }}
@@ -667,6 +856,7 @@ export default function Home() {
           component="header"
           sx={{
             bgcolor: channelAppearance.softBg,
+            border: "1px solid rgba(96, 165, 250, 0.14)",
             borderBottom: 3,
             borderColor: channelAppearance.accent,
             borderRadius: 1,
@@ -741,9 +931,10 @@ export default function Home() {
                     key={message._id}
                     sx={{
                       alignSelf: isOwnMessage ? "flex-end" : "flex-start",
-                      bgcolor: isOwnMessage ? channelAppearance.messageBg : "background.paper",
+                      bgcolor: isOwnMessage ? channelAppearance.messageBg : "rgba(5, 17, 31, 0.82)",
                       border: 1,
-                      borderColor: isOwnMessage ? channelAppearance.messageBorder : "divider",
+                      borderColor: isOwnMessage ? channelAppearance.messageBorder : "rgba(148, 163, 184, 0.16)",
+                      color: "#e5edf7",
                       maxWidth: 680,
                       p: 2,
                       width: "min(680px, 100%)",
@@ -844,6 +1035,7 @@ export default function Home() {
                       sx={{
                         color: composeAppearance.accent,
                         fontWeight: 700,
+                        bgcolor: "rgba(2, 8, 18, 0.3)",
                         "& .MuiOutlinedInput-notchedOutline": {
                           borderColor: composeAppearance.messageBorder,
                         },
@@ -880,6 +1072,9 @@ export default function Home() {
                   sx={{
                     "& .MuiOutlinedInput-input": {
                       color: composeAppearance.accent,
+                    },
+                    "& .MuiOutlinedInput-root": {
+                      bgcolor: "rgba(2, 8, 18, 0.3)",
                     },
                     "& .MuiOutlinedInput-root fieldset": {
                       borderColor: composeAppearance.messageBorder,
@@ -947,6 +1142,125 @@ export default function Home() {
             </Paper>
           </Box>
         )}
+      </Box>
+
+      <Box
+        component="aside"
+        aria-label={t.onlinePlayers}
+        sx={{
+          bgcolor: "rgba(3, 10, 20, 0.62)",
+          color: "#e5edf7",
+          display: "flex",
+          flexDirection: "column",
+          gap: 2.5,
+          gridColumn: { xs: "1", lg: "3" },
+          gridRow: { xs: "4", lg: "2" },
+          minHeight: 0,
+          overflowY: "auto",
+          p: { xs: 2.5, md: 3 },
+        }}
+      >
+        <Paper
+          elevation={0}
+          sx={{
+            bgcolor: "rgba(5, 17, 31, 0.76)",
+            border: "1px solid rgba(96, 165, 250, 0.16)",
+            color: "inherit",
+            p: 2.25,
+          }}
+          variant="outlined"
+        >
+          <Box sx={{ alignItems: "center", display: "flex", justifyContent: "space-between", mb: 2 }}>
+            <Typography sx={{ color: "#c7d5e6", fontSize: "0.78rem", fontWeight: 800, letterSpacing: 1.4, textTransform: "uppercase" }}>
+              {t.onlinePlayers} - {onlineUsers.length}
+            </Typography>
+          </Box>
+
+          <TextField
+            disabled
+            fullWidth
+            placeholder="Search friends..."
+            size="small"
+            sx={{
+              mb: 2,
+              "& .MuiOutlinedInput-root": {
+                bgcolor: "rgba(2, 8, 18, 0.58)",
+                color: "#90a4ba",
+              },
+              "& .MuiOutlinedInput-notchedOutline": {
+                borderColor: "rgba(148, 163, 184, 0.18)",
+              },
+            }}
+          />
+
+          <Box sx={{ display: "grid", gap: 1.2 }}>
+            {onlineUsers.length > 0 ? (
+              onlineUsers.map((user) => (
+                <Box
+                  key={user.accountId}
+                  sx={{
+                    alignItems: "center",
+                    borderBottom: "1px solid rgba(148, 163, 184, 0.1)",
+                    display: "grid",
+                    gap: 1.25,
+                    gridTemplateColumns: "40px minmax(0, 1fr) 32px",
+                    pb: 1.15,
+                  }}
+                >
+                  <Box sx={{ position: "relative" }}>
+                    <Box sx={{ bgcolor: "#132337", border: "1px solid rgba(96, 165, 250, 0.35)", borderRadius: "50%", height: 40, width: 40 }} />
+                    <Box
+                      sx={{
+                        bgcolor: user.onlineStatus === "online" ? "#22c55e" : user.onlineStatus === "busy" ? "#f59e0b" : "#60a5fa",
+                        border: "2px solid #06111e",
+                        borderRadius: "50%",
+                        bottom: 0,
+                        height: 12,
+                        position: "absolute",
+                        right: 0,
+                        width: 12,
+                      }}
+                    />
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography sx={{ fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.displayName}</Typography>
+                    <Typography sx={{ color: user.onlineStatus === "online" ? "#78d88f" : "#f0b35f", fontSize: "0.82rem" }}>
+                      {user.onlineStatus}
+                    </Typography>
+                  </Box>
+                  <IconButton
+                    aria-label={`${user.displayName} menu`}
+                    color="inherit"
+                    onClick={(event) => handlePlayerMenuOpen(event, user)}
+                    size="small"
+                    sx={{ color: "#f0b35f" }}
+                    type="button"
+                  >
+                    ...
+                  </IconButton>
+                </Box>
+              ))
+            ) : (
+              <Typography sx={{ color: "#8ca3ba", fontSize: "0.9rem" }}>{t.noOnlinePlayers}</Typography>
+            )}
+          </Box>
+        </Paper>
+
+        <Paper
+          elevation={0}
+          sx={{
+            bgcolor: "rgba(5, 17, 31, 0.58)",
+            border: "1px solid rgba(96, 165, 250, 0.14)",
+            color: "inherit",
+            p: 2.25,
+          }}
+          variant="outlined"
+        >
+          <Typography sx={{ color: "#c7d5e6", fontSize: "0.78rem", fontWeight: 800, letterSpacing: 1.4, mb: 1.5, textTransform: "uppercase" }}>
+            {t.apiTitle}
+          </Typography>
+          <Chip label={apiStatus} size="small" sx={{ bgcolor: isApiConnected ? "rgba(34, 197, 94, 0.14)" : "rgba(245, 158, 11, 0.14)", color: isApiConnected ? "#86efac" : "#fcd34d", fontWeight: 700 }} />
+        </Paper>
       </Box>
     </Box>
   );
