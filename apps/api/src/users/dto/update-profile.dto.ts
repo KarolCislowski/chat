@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString, IsUrl, MaxLength } from "class-validator";
+import { IsIn, IsOptional, IsString, Matches, MaxLength } from "class-validator";
 import { OnlineStatus, UiLanguage } from "../schemas/user-profile.schema";
 
 export class UpdateProfileDto {
@@ -8,7 +8,8 @@ export class UpdateProfileDto {
   displayName?: string;
 
   @IsOptional()
-  @IsUrl({ require_protocol: true })
+  @IsString()
+  @Matches(/^\/assets\/imgs\/avatars\/[A-Za-z0-9_.-]+\.png$/)
   avatarUrl?: string | null;
 
   @IsOptional()

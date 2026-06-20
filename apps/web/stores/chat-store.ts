@@ -57,6 +57,7 @@ type ChatState = {
   draft: string;
   health: ApiHealth | null;
   healthError: string | null;
+  isChatViewVisible: boolean;
   messages: Message[];
   unreadByChannel: Record<string, number>;
   connectRealtime: (apiBaseUrl: string, accessToken: string) => void;
@@ -65,6 +66,7 @@ type ChatState = {
   loadMessages: (apiBaseUrl: string, accessToken: string) => Promise<void>;
   sendMessage: (content: string) => void;
   setActiveChannel: (channel: ChatView) => void;
+  setChatViewVisible: (isVisible: boolean) => void;
   setComposeChannel: (channel: ChatChannel) => void;
   setCurrentAccountId: (accountId: string | null) => void;
   setDraft: (draft: string) => void;
@@ -161,6 +163,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   draft: "",
   health: null,
   healthError: null,
+  isChatViewVisible: false,
   messages: [],
   unreadByChannel: {},
   connectRealtime: (apiBaseUrl, accessToken) => {
@@ -199,7 +202,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         const isActiveChannelMessage = isMessageForChannel(message, state.activeChannel);
         const messageChannelKey = getMessageChannelKey(message, state.currentAccountId);
         const shouldIncrementUnread =
-          Boolean(messageChannelKey) && !isActiveChannelMessage && message.senderId !== state.currentAccountId;
+          Boolean(messageChannelKey) && (!state.isChatViewVisible || !isActiveChannelMessage) && message.senderId !== state.currentAccountId;
 
         return {
           messages: isActiveChannelMessage ? upsertMessage(state.messages, message) : state.messages,
@@ -318,6 +321,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
       draft: "",
       messages: [],
       unreadByChannel: clearUnread(state.unreadByChannel, channel),
+    })),
+  setChatViewVisible: (isVisible) =>
+    set((state) => ({
+      isChatViewVisible: isVisible,
+      unreadByChannel: isVisible ? clearUnread(state.unreadByChannel, state.activeChannel) : state.unreadByChannel,
     })),
   setComposeChannel: (channel) => set({ composeChannel: channel }),
   setCurrentAccountId: (accountId) => set({ currentAccountId: accountId }),
