@@ -41,7 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const loadUsers = useUserStore((state) => state.loadUsers);
   const isAuthenticated = Boolean(profile && tokens?.accessToken);
   const [accountMenuAnchor, setAccountMenuAnchor] = useState<HTMLElement | null>(null);
-  const activeNavKey = pathname === "/guilds" ? "guild" : pathname === "/profile" ? "profile" : "social";
+  const activeNavKey = pathname.startsWith("/guilds") ? "guild" : pathname.startsWith("/profile") ? "profile" : "social";
   const unreadMessageCount = Object.values(unreadByChannel).reduce((total, count) => total + count, 0);
   const showSocialUnread = activeNavKey !== "social" && unreadMessageCount > 0;
   const avatarPath = resolveAvatarPath(profile?.avatarUrl);

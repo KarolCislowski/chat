@@ -464,15 +464,6 @@ export default function Home() {
           p: { xs: 2.5, md: 2.25 },
         }}
       >
-        <Box>
-          <Typography color="#8aa3b5" sx={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase" }}>
-            {t.chat}
-          </Typography>
-          <Typography component="h1" sx={{ fontSize: "2rem", fontWeight: 700, lineHeight: 1.1 }}>
-            {t.conversations}
-          </Typography>
-        </Box>
-
         <List aria-label={t.conversations} disablePadding sx={{ display: "grid", gap: 0.45 }}>
           <Typography
             sx={{
@@ -599,10 +590,8 @@ export default function Home() {
                       </IconButton>
                     </Box>
                   }
-                  secondary={user.onlineStatus}
                   slotProps={{
                     primary: { sx: { fontWeight: 700 } },
-                    secondary: { sx: { color: "#b7c3cf", fontSize: "0.85rem" } },
                   }}
                 />
               </ListItemButton>
@@ -761,25 +750,19 @@ export default function Home() {
                     sx={{ bgcolor: "rgba(2, 8, 18, 0.42)", color: "#bfdbfe", fontWeight: 700 }}
                   />
                 </>
-              ) : (
-                <>
-                  <Chip label={connectionStatus} size="small" sx={{ bgcolor: channelAppearance.badgeBg, color: "#f8fbff", fontWeight: 800 }} />
-                  <Chip label={apiStatus} size="small" sx={{ bgcolor: "rgba(2, 8, 18, 0.42)", color: "#bfdbfe", fontWeight: 700 }} />
-                  {activeChannel.type === "whisper" ? (
-                    <Chip
-                      label={activeWhisperUser?.onlineStatus ?? t.offline}
-                      size="small"
-                      sx={{ bgcolor: "rgba(2, 8, 18, 0.42)", color: channelAppearance.accent, fontWeight: 800 }}
-                    />
-                  ) : null}
-                </>
-              )}
+              ) : activeChannel.type === "whisper" ? (
+                <Chip
+                  label={activeWhisperUser?.onlineStatus ?? t.offline}
+                  size="small"
+                  sx={{ bgcolor: "rgba(2, 8, 18, 0.42)", color: channelAppearance.accent, fontWeight: 800 }}
+                />
+              ) : null}
             </Box>
           </Box>
 
           <Button
             component={Link}
-            href={activeGuild ? "/guilds" : activeChannel.type === "whisper" ? "/profile" : "/"}
+            href={activeGuild ? "/guilds" : activeChannel.type === "whisper" ? `/profile/${activeChannel.recipientId}` : "/"}
             sx={{
               alignSelf: "center",
               borderColor: hexToRgba(channelAppearance.accent, 0.72),

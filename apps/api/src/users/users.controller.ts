@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Req, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { AuthenticatedRequest } from "../auth/types/authenticated-request";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
@@ -42,6 +42,13 @@ export class UsersController {
     const profiles = await this.usersService.listProfiles(request.user.accountId);
 
     return profiles.map((profile) => this.toProfileResponse(profile));
+  }
+
+  @Get(":accountId")
+  async getProfile(@Param("accountId") accountId: string) {
+    const profile = await this.usersService.getProfileByAccountId(accountId);
+
+    return this.toProfileResponse(profile);
   }
 
   private toProfileResponse(profile: UserProfileDocument) {
