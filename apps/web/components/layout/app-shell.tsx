@@ -146,20 +146,17 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         <Box sx={{ alignItems: "center", display: "flex", gap: 2 }}>
           <Box
+            component="img"
+            alt="Dworven Shaft"
+            src="/assets/imgs/logo.png"
             sx={{
-              alignItems: "center",
-              border: "1px solid rgba(240, 179, 95, 0.68)",
-              color: "#f0b35f",
-              display: "flex",
-              fontSize: "1.35rem",
-              fontWeight: 800,
-              height: 46,
-              justifyContent: "center",
-              width: 38,
+              display: "block",
+              flex: "0 0 auto",
+              height: 56,
+              objectFit: "contain",
+              width: 56,
             }}
-          >
-            DS
-          </Box>
+          />
           <Box>
             <Typography sx={{ fontSize: "1.35rem", fontWeight: 800, letterSpacing: 1.4, lineHeight: 1 }}>
               Dworven Shaft

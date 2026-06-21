@@ -107,21 +107,16 @@ export default function AuthPage() {
       >
         <Box sx={{ alignItems: "center", display: "flex", gap: 1.6 }}>
           <Box
+            component="img"
+            alt="Dworven Shaft"
+            src="/assets/imgs/logo.png"
             sx={{
-              alignItems: "center",
-              border: "1px solid rgba(240, 179, 95, 0.68)",
-              color: "#f0b35f",
-              display: "flex",
               flex: "0 0 auto",
-              fontSize: "1rem",
-              fontWeight: 900,
-              height: 42,
-              justifyContent: "center",
-              width: 34,
+              height: 52,
+              objectFit: "contain",
+              width: 52,
             }}
-          >
-            DS
-          </Box>
+          />
           <Box sx={{ display: "grid", gap: 0.45 }}>
             <Typography sx={{ color: "#7dd3fc", fontSize: "0.75rem", fontWeight: 800, letterSpacing: 1.3, textTransform: "uppercase" }}>
               {t.chat}
