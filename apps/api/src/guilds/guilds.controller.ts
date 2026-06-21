@@ -24,12 +24,12 @@ export class GuildsController {
 
   @Post()
   createGuild(@Req() request: AuthenticatedRequest, @Body() dto: CreateGuildDto) {
-    return this.guildsService.createGuild(request.user.accountId, dto.name, dto.themeColor, dto.emblemUrl);
+    return this.guildsService.createGuild(request.user.accountId, dto.name, dto.themeColor, dto.emblemUrl, dto.backgroundUrl);
   }
 
   @Patch(":guildId/appearance")
   updateAppearance(@Req() request: AuthenticatedRequest, @Param("guildId") guildId: string, @Body() dto: UpdateGuildAppearanceDto) {
-    return this.guildsService.updateAppearance(request.user.accountId, guildId, dto.themeColor, dto.emblemUrl);
+    return this.guildsService.updateAppearance(request.user.accountId, guildId, dto.themeColor, dto.emblemUrl, dto.backgroundUrl);
   }
 
   @Post("join")

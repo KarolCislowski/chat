@@ -15,4 +15,9 @@ export class CreateGuildDto {
   @IsString()
   @Matches(/^\/assets\/imgs\/flags\/(black|blue|green|pink|purple|red|white)\/[A-Za-z0-9_.-]+\.png$/)
   emblemUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^\/assets\/imgs\/gbg\/[A-Za-z0-9_.-]+\.png$/)
+  backgroundUrl?: string;
 }

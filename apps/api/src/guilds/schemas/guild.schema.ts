@@ -28,6 +28,9 @@ export class Guild {
   @Prop({ default: "/assets/imgs/flags/red/crest_001_16_29_41_r1_c1.png", required: true, trim: true })
   emblemUrl!: string;
 
+  @Prop({ default: "/assets/imgs/gbg/01_radiant_alpine_castle.png", required: true, trim: true })
+  backgroundUrl!: string;
+
   createdAt!: Date;
 }
 

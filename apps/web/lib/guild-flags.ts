@@ -36,6 +36,21 @@ export const guildFlagSets: GuildFlagSet[] = guildThemeColors.map((color) => {
 
 export const defaultGuildThemeColor: GuildThemeColor = "red";
 export const defaultGuildEmblemUrl = guildFlagSets.find((set) => set.label === defaultGuildThemeColor)?.paths[0] ?? "";
+export const guildBackgroundOptions = [
+  "/assets/imgs/gbg/01_radiant_alpine_castle.png",
+  "/assets/imgs/gbg/02_volcanic_dark_fortress.png",
+  "/assets/imgs/gbg/03_elven_forest_palace.png",
+  "/assets/imgs/gbg/04_lava_cavern_citadel.png",
+  "/assets/imgs/gbg/05_dragon_statue_mountain_citadel.png",
+  "/assets/imgs/gbg/06_sunbeam_imperial_castle.png",
+  "/assets/imgs/gbg/07_arcane_mage_citadel.png",
+  "/assets/imgs/gbg/08_forest_outpost.png",
+  "/assets/imgs/gbg/09_tropical_harbor.png",
+  "/assets/imgs/gbg/10_frozen_ice_fortress.png",
+  "/assets/imgs/gbg/11_desert_palace_city.png",
+  "/assets/imgs/gbg/12_jungle_temple_ruins.png",
+] as const;
+export const defaultGuildBackgroundUrl = guildBackgroundOptions[0];
 
 export function getGuildFlagSet(color: string | null | undefined) {
   return guildFlagSets.find((set) => set.label === color) ?? guildFlagSets.find((set) => set.label === defaultGuildThemeColor) ?? guildFlagSets[0];
@@ -49,4 +64,8 @@ export function resolveGuildEmblemUrl(emblemUrl: string | null | undefined, them
   const flagSet = getGuildFlagSet(themeColor);
 
   return emblemUrl && flagSet.paths.includes(emblemUrl) ? emblemUrl : flagSet.paths[0];
+}
+
+export function resolveGuildBackgroundUrl(backgroundUrl: string | null | undefined) {
+  return backgroundUrl && guildBackgroundOptions.includes(backgroundUrl as (typeof guildBackgroundOptions)[number]) ? backgroundUrl : defaultGuildBackgroundUrl;
 }

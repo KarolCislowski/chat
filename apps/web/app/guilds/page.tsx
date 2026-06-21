@@ -5,7 +5,15 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect } from "react";
 import { Alert, Box, Button, Chip, Paper, TextField, Typography } from "@mui/material";
 import { PageFrame } from "../../components/layout/page-frame";
-import { getGuildFlagSet, getGuildThemeAccent, guildFlagSets, GuildThemeColor, resolveGuildEmblemUrl } from "../../lib/guild-flags";
+import {
+  getGuildFlagSet,
+  getGuildThemeAccent,
+  guildBackgroundOptions,
+  guildFlagSets,
+  GuildThemeColor,
+  resolveGuildBackgroundUrl,
+  resolveGuildEmblemUrl,
+} from "../../lib/guild-flags";
 import { useAuthStore } from "../../stores/auth-store";
 import { Guild, useGuildStore } from "../../stores/guild-store";
 import { useLanguageStore } from "../../stores/language-store";
@@ -150,6 +158,62 @@ function GuildAppearancePicker({
   );
 }
 
+function GuildBackgroundPicker({
+  backgroundUrl,
+  disabled,
+  onChange,
+}: {
+  backgroundUrl: string;
+  disabled: boolean;
+  onChange: (backgroundUrl: string) => void;
+}) {
+  return (
+    <Box
+      sx={{
+        bgcolor: "rgba(2, 8, 18, 0.3)",
+        border: "1px solid rgba(96, 165, 250, 0.14)",
+        borderRadius: 1,
+        display: "grid",
+        gap: 0.8,
+        gridTemplateColumns: "repeat(auto-fill, minmax(96px, 1fr))",
+        p: 1,
+      }}
+    >
+      {guildBackgroundOptions.map((option) => {
+        const resolvedBackgroundUrl = resolveGuildBackgroundUrl(backgroundUrl);
+        const isSelected = option === resolvedBackgroundUrl;
+
+        return (
+          <Button
+            aria-label={option}
+            disabled={disabled}
+            key={option}
+            onClick={() => onChange(option)}
+            sx={{
+              aspectRatio: "16 / 9",
+              backgroundImage: `linear-gradient(180deg, rgba(3, 10, 20, 0.08), rgba(3, 10, 20, 0.38)), url(${option})`,
+              backgroundPosition: "center",
+              backgroundSize: "cover",
+              border: "1px solid",
+              borderColor: isSelected ? "#f8fbff" : "rgba(96, 165, 250, 0.16)",
+              borderRadius: 1,
+              boxShadow: isSelected ? "0 0 0 2px rgba(96, 165, 250, 0.32)" : "none",
+              minWidth: 0,
+              overflow: "hidden",
+              p: 0,
+              "&:hover": {
+                borderColor: "#60a5fa",
+                filter: "brightness(1.08)",
+              },
+            }}
+            type="button"
+          />
+        );
+      })}
+    </Box>
+  );
+}
+
 export default function GuildsPage() {
   const router = useRouter();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";
@@ -167,9 +231,11 @@ export default function GuildsPage() {
   const loadAvailableGuilds = useGuildStore((state) => state.loadAvailableGuilds);
   const loadGuilds = useGuildStore((state) => state.loadGuilds);
   const loadJoinRequests = useGuildStore((state) => state.loadJoinRequests);
+  const backgroundUrl = useGuildStore((state) => state.backgroundUrl);
   const emblemUrl = useGuildStore((state) => state.emblemUrl);
   const name = useGuildStore((state) => state.name);
   const requestJoin = useGuildStore((state) => state.requestJoin);
+  const setBackgroundUrl = useGuildStore((state) => state.setBackgroundUrl);
   const setEmblemUrl = useGuildStore((state) => state.setEmblemUrl);
   const setName = useGuildStore((state) => state.setName);
   const setThemeColor = useGuildStore((state) => state.setThemeColor);
@@ -251,11 +317,11 @@ export default function GuildsPage() {
     }
   }
 
-  async function handleUpdateAppearance(guildId: string, nextThemeColor: GuildThemeColor, nextEmblemUrl: string) {
+  async function handleUpdateAppearance(guildId: string, nextThemeColor: GuildThemeColor, nextEmblemUrl: string, nextBackgroundUrl: string) {
     const accessToken = await getFreshAccessToken(apiBaseUrl);
 
     if (accessToken) {
-      await updateGuildAppearance(apiBaseUrl, accessToken, guildId, nextThemeColor, nextEmblemUrl);
+      await updateGuildAppearance(apiBaseUrl, accessToken, guildId, nextThemeColor, nextEmblemUrl, nextBackgroundUrl);
     }
   }
 
@@ -300,8 +366,21 @@ export default function GuildsPage() {
           </Typography>
           <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "minmax(0, 1fr) 320px" } }}>
             <TextField disabled={isLoading} fullWidth label={t.guildName} onChange={(event) => setName(event.target.value)} required sx={fieldSx} value={name} />
-            <Box sx={{ alignItems: "center", display: "flex", gap: 1.25 }}>
-              <Box component="img" alt="" src={resolveGuildEmblemUrl(emblemUrl, themeColor)} sx={{ border: `1px solid ${getGuildThemeAccent(themeColor)}88`, height: 54, width: 54 }} />
+            <Box
+              sx={{
+                alignItems: "center",
+                backgroundImage: `linear-gradient(90deg, rgba(3, 10, 20, 0.82), rgba(3, 10, 20, 0.42)), url(${resolveGuildBackgroundUrl(backgroundUrl)})`,
+                backgroundPosition: "center",
+                backgroundSize: "cover",
+                border: "1px solid rgba(96, 165, 250, 0.16)",
+                borderRadius: 1,
+                display: "flex",
+                gap: 1.25,
+                minHeight: 72,
+                p: 1,
+              }}
+            >
+              <Box component="img" alt="" src={resolveGuildEmblemUrl(emblemUrl, themeColor)} sx={{ height: 62, objectFit: "contain", width: 42 }} />
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography sx={{ color: "#7dd3fc", fontSize: "0.72rem", fontWeight: 800, letterSpacing: 1, textTransform: "uppercase" }}>
                   {t.guildAppearance}
@@ -319,6 +398,12 @@ export default function GuildsPage() {
             }}
             themeColor={themeColor}
           />
+          <Box sx={{ display: "grid", gap: 1 }}>
+            <Typography sx={{ color: "#7dd3fc", fontSize: "0.72rem", fontWeight: 800, letterSpacing: 1, textTransform: "uppercase" }}>
+              {t.guildBackground}
+            </Typography>
+            <GuildBackgroundPicker backgroundUrl={backgroundUrl} disabled={isLoading} onChange={setBackgroundUrl} />
+          </Box>
           <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
             <Button
               disabled={isLoading || guilds.length >= 3}
@@ -348,14 +433,16 @@ export default function GuildsPage() {
 
             {guilds.map((guild) => {
               const joinRequests = joinRequestsByGuildId[guild._id] ?? [];
+              const guildBackgroundUrl = resolveGuildBackgroundUrl(guild.backgroundUrl);
 
               return (
                 <Paper
                   key={guild._id}
                   sx={{
                     ...panelSx,
-                    background:
-                      "linear-gradient(90deg, rgba(3, 18, 34, 0.95), rgba(4, 15, 28, 0.78)), radial-gradient(circle at 100% 0%, rgba(240, 179, 95, 0.12), transparent 32%)",
+                    background: `linear-gradient(90deg, rgba(3, 18, 34, 0.96), rgba(4, 15, 28, 0.82)), url(${guildBackgroundUrl})`,
+                    backgroundPosition: "center",
+                    backgroundSize: "cover",
                     display: "grid",
                     gap: 1.5,
                     p: 2,
@@ -432,8 +519,23 @@ export default function GuildsPage() {
                       <GuildAppearancePicker
                         disabled={isLoading}
                         emblemUrl={resolveGuildEmblemUrl(guild.emblemUrl, guild.themeColor)}
-                        onChange={(nextThemeColor, nextEmblemUrl) => void handleUpdateAppearance(guild._id, nextThemeColor, nextEmblemUrl)}
+                        onChange={(nextThemeColor, nextEmblemUrl) => void handleUpdateAppearance(guild._id, nextThemeColor, nextEmblemUrl, guildBackgroundUrl)}
                         themeColor={guild.themeColor}
+                      />
+                      <Typography sx={{ color: "#7dd3fc", fontSize: "0.72rem", fontWeight: 800, letterSpacing: 1, textTransform: "uppercase" }}>
+                        {t.guildBackground}
+                      </Typography>
+                      <GuildBackgroundPicker
+                        backgroundUrl={guildBackgroundUrl}
+                        disabled={isLoading}
+                        onChange={(nextBackgroundUrl) =>
+                          void handleUpdateAppearance(
+                            guild._id,
+                            guild.themeColor,
+                            resolveGuildEmblemUrl(guild.emblemUrl, guild.themeColor),
+                            nextBackgroundUrl,
+                          )
+                        }
                       />
                     </Box>
                   ) : null}
@@ -454,7 +556,18 @@ export default function GuildsPage() {
             </Typography>
 
             {availableGuilds.map((guild) => (
-              <Paper key={guild._id} sx={{ ...panelSx, display: "grid", gap: 1.5, p: 2 }}>
+              <Paper
+                key={guild._id}
+                sx={{
+                  ...panelSx,
+                  background: `linear-gradient(90deg, rgba(3, 18, 34, 0.96), rgba(4, 15, 28, 0.82)), url(${resolveGuildBackgroundUrl(guild.backgroundUrl)})`,
+                  backgroundPosition: "center",
+                  backgroundSize: "cover",
+                  display: "grid",
+                  gap: 1.5,
+                  p: 2,
+                }}
+              >
                 <Box sx={{ alignItems: "center", display: "flex", gap: 1.35 }}>
                   <GuildEmblem guild={guild} />
                   <Box>

@@ -29,6 +29,7 @@ export const pl = {
   globalChat: "Chat globalny",
   guildLimit: "Mozesz nalezec maksymalnie do 3 gildii.",
   guildAppearance: "Wyglad gildii",
+  guildBackground: "Tlo gildii",
   guildName: "Nazwa gildii",
   guilds: "Gildie",
   inviteToGuild: "Zapros do",

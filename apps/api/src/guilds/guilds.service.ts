@@ -10,6 +10,7 @@ import { GuildMembership, GuildMembershipDocument } from "./schemas/guild-member
 const MAX_GUILDS_PER_USER = 3;
 const DEFAULT_GUILD_THEME_COLOR: GuildThemeColor = "red";
 const DEFAULT_GUILD_EMBLEM_URL = "/assets/imgs/flags/red/crest_001_16_29_41_r1_c1.png";
+const DEFAULT_GUILD_BACKGROUND_URL = "/assets/imgs/gbg/01_radiant_alpine_castle.png";
 
 @Injectable()
 export class GuildsService {
@@ -20,11 +21,18 @@ export class GuildsService {
     @InjectModel(UserProfile.name) private readonly profileModel: Model<UserProfileDocument>,
   ) {}
 
-  async createGuild(accountId: string, name: string, themeColor = DEFAULT_GUILD_THEME_COLOR, emblemUrl = DEFAULT_GUILD_EMBLEM_URL) {
+  async createGuild(
+    accountId: string,
+    name: string,
+    themeColor = DEFAULT_GUILD_THEME_COLOR,
+    emblemUrl = DEFAULT_GUILD_EMBLEM_URL,
+    backgroundUrl = DEFAULT_GUILD_BACKGROUND_URL,
+  ) {
     await this.assertMembershipLimit(accountId);
-    this.assertGuildAppearance(themeColor, emblemUrl);
+    this.assertGuildAppearance(themeColor, emblemUrl, backgroundUrl);
 
     const guild = await this.guildModel.create({
+      backgroundUrl,
       emblemUrl,
       inviteCodes: [this.createInviteCode()],
       members: [new Types.ObjectId(accountId)],
@@ -43,10 +51,10 @@ export class GuildsService {
     return this.toGuildResponse(guild, membership.role);
   }
 
-  async updateAppearance(accountId: string, guildId: string, themeColor: GuildThemeColor, emblemUrl: string) {
+  async updateAppearance(accountId: string, guildId: string, themeColor: GuildThemeColor, emblemUrl: string, backgroundUrl: string) {
     const membership = await this.assertCanManageGuild(accountId, guildId);
-    this.assertGuildAppearance(themeColor, emblemUrl);
-    const guild = await this.guildModel.findByIdAndUpdate(guildId, { $set: { emblemUrl, themeColor } }, { new: true }).exec();
+    this.assertGuildAppearance(themeColor, emblemUrl, backgroundUrl);
+    const guild = await this.guildModel.findByIdAndUpdate(guildId, { $set: { backgroundUrl, emblemUrl, themeColor } }, { new: true }).exec();
 
     if (!guild) {
       throw new NotFoundException("Guild was not found.");
@@ -333,9 +341,13 @@ export class GuildsService {
     return randomBytes(8).toString("hex");
   }
 
-  private assertGuildAppearance(themeColor: GuildThemeColor, emblemUrl: string) {
+  private assertGuildAppearance(themeColor: GuildThemeColor, emblemUrl: string, backgroundUrl: string) {
     if (!emblemUrl.startsWith(`/assets/imgs/flags/${themeColor}/`)) {
       throw new BadRequestException("Guild emblem must belong to the selected theme color.");
+    }
+
+    if (!backgroundUrl.startsWith("/assets/imgs/gbg/")) {
+      throw new BadRequestException("Guild background must belong to the available background set.");
     }
   }
 
@@ -349,6 +361,7 @@ export class GuildsService {
       inviteCodes: guild.inviteCodes,
       themeColor: guild.themeColor ?? DEFAULT_GUILD_THEME_COLOR,
       emblemUrl: guild.emblemUrl ?? DEFAULT_GUILD_EMBLEM_URL,
+      backgroundUrl: guild.backgroundUrl ?? DEFAULT_GUILD_BACKGROUND_URL,
       createdAt: guild.createdAt,
       membership: {
         role,

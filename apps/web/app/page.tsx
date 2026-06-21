@@ -27,7 +27,7 @@ import {
 } from "@mui/material";
 import { useAuthStore } from "../stores/auth-store";
 import { resolveAvatarPath } from "../lib/avatar-options";
-import { getGuildThemeAccent, resolveGuildEmblemUrl } from "../lib/guild-flags";
+import { getGuildThemeAccent, resolveGuildBackgroundUrl, resolveGuildEmblemUrl } from "../lib/guild-flags";
 import { getChatChannelKey, useChatStore } from "../stores/chat-store";
 import { Guild, useGuildStore } from "../stores/guild-store";
 import { useLanguageStore } from "../stores/language-store";
@@ -93,6 +93,7 @@ export default function Home() {
   const isAuthenticated = Boolean(profile && tokens?.accessToken);
   const activeGuild = activeChannel.type === "guild" ? guilds.find((guild) => guild._id === activeChannel.guildId) : null;
   const composeGuild = composeChannel.type === "guild" ? guilds.find((guild) => guild._id === composeChannel.guildId) : null;
+  const activeGuildBackgroundUrl = activeGuild ? resolveGuildBackgroundUrl(activeGuild.backgroundUrl) : null;
   const activeChannelTitle =
     activeChannel.type === "open" ? t.openChat : activeChannel.type === "whisper" ? activeChannel.recipientDisplayName : activeGuild?.name ?? t.globalChat;
   const channelAppearance = useMemo(() => {
@@ -672,61 +673,154 @@ export default function Home() {
           borderRight: { lg: "1px solid rgba(96, 165, 250, 0.08)" },
           display: "grid",
           gridColumn: { xs: "1", lg: "2" },
-          gridTemplateRows: "auto minmax(0, 1fr) auto",
+          gridTemplateRows: activeGuild ? "auto minmax(0, 1fr) auto" : "auto minmax(0, 1fr) auto",
           minHeight: 0,
           minWidth: 0,
           p: { xs: 2.5, md: 4 },
+          rowGap: activeGuild ? 2.25 : 0,
         }}
       >
-        <Box
-          component="header"
-          sx={{
-            bgcolor: channelAppearance.softBg,
-            border: "1px solid rgba(96, 165, 250, 0.14)",
-            borderBottom: 3,
-            borderColor: channelAppearance.accent,
-            borderRadius: 1,
-            display: "flex",
-            flexDirection: { xs: "column", md: "row" },
-            gap: 2.5,
-            justifyContent: "space-between",
-            p: 2.25,
-          }}
-        >
-          <Box>
-            <Typography color="text.secondary" sx={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase" }}>
-              {t.workspace}
-            </Typography>
-            <Typography component="h2" sx={{ color: channelAppearance.accent, fontSize: "1.45rem", fontWeight: 700, lineHeight: 1.2 }}>
-              {activeChannelTitle}
-            </Typography>
-            <Chip
-              label={channelAppearance.label}
-              size="small"
+        {!activeGuild ? (
+          <Box
+            component="header"
+            sx={{
+              bgcolor: channelAppearance.softBg,
+              border: "1px solid rgba(96, 165, 250, 0.14)",
+              borderBottom: 3,
+              borderColor: channelAppearance.accent,
+              borderRadius: 1,
+              display: "flex",
+              flexDirection: { xs: "column", md: "row" },
+              gap: 2.5,
+              justifyContent: "space-between",
+              p: 2.25,
+            }}
+          >
+            <Box>
+              <Typography color="text.secondary" sx={{ fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase" }}>
+                {t.workspace}
+              </Typography>
+              <Typography component="h2" sx={{ color: channelAppearance.accent, fontSize: "1.45rem", fontWeight: 700, lineHeight: 1.2 }}>
+                {activeChannelTitle}
+              </Typography>
+              <Chip
+                label={channelAppearance.label}
+                size="small"
+                sx={{
+                  bgcolor: channelAppearance.badgeBg,
+                  color: channelAppearance.badgeColor,
+                  fontWeight: 700,
+                  mt: 1,
+                }}
+              />
+            </Box>
+
+            <Box sx={{ alignItems: { xs: "flex-start", md: "center" }, display: "flex", flexWrap: "wrap", gap: 1 }}>
+              <Chip
+                color={connectionStatus === "connected" ? "primary" : "warning"}
+                label={connectionStatus}
+                sx={{ fontWeight: 700, maxWidth: "100%" }}
+                variant="outlined"
+              />
+              <Chip
+                color={isApiConnected ? "primary" : "warning"}
+                label={apiStatus}
+                sx={{ fontWeight: 700, maxWidth: "100%" }}
+                variant="outlined"
+              />
+            </Box>
+          </Box>
+        ) : null}
+
+        {activeGuild ? (
+          <Box
+            component="section"
+            sx={{
+              alignItems: "center",
+              backgroundImage: `linear-gradient(90deg, rgba(3, 10, 20, 0.9) 0%, rgba(3, 10, 20, 0.58) 52%, rgba(3, 10, 20, 0.22) 100%), url(${activeGuildBackgroundUrl})`,
+              backgroundPosition: "center",
+              backgroundSize: "cover",
+              border: `1px solid ${channelAppearance.messageBorder}`,
+              borderRadius: 1,
+              boxShadow: `inset 0 -56px 90px rgba(2, 8, 18, 0.42), 0 18px 44px rgba(0, 0, 0, 0.22)`,
+              display: "grid",
+              gap: { xs: 1.5, sm: 2.5 },
+              gridTemplateColumns: { xs: "74px minmax(0, 1fr)", md: "116px minmax(0, 1fr) auto" },
+              minHeight: { xs: 234, md: 282 },
+              overflow: "hidden",
+              p: { xs: 2, md: 2.5 },
+              position: "relative",
+            }}
+          >
+            <Box
+              component="img"
+              alt=""
+              src={resolveGuildEmblemUrl(activeGuild.emblemUrl, activeGuild.themeColor)}
               sx={{
-                bgcolor: channelAppearance.badgeBg,
-                color: channelAppearance.badgeColor,
-                fontWeight: 700,
-                mt: 1,
+                alignSelf: "stretch",
+                filter: "drop-shadow(0 16px 24px rgba(0, 0, 0, 0.54))",
+                height: "100%",
+                maxHeight: { xs: 195, md: 246 },
+                objectFit: "contain",
+                width: { xs: 70, md: 108 },
               }}
             />
-          </Box>
 
-          <Box sx={{ alignItems: { xs: "flex-start", md: "center" }, display: "flex", flexWrap: "wrap", gap: 1 }}>
-            <Chip
-              color={connectionStatus === "connected" ? "primary" : "warning"}
-              label={connectionStatus}
-              sx={{ fontWeight: 700, maxWidth: "100%" }}
+            <Box sx={{ minWidth: 0 }}>
+              <Typography sx={{ color: channelAppearance.accent, fontSize: "0.72rem", fontWeight: 800, letterSpacing: 1.4, textTransform: "uppercase" }}>
+                {t.guilds}
+              </Typography>
+              <Typography
+                component="h3"
+                sx={{
+                  color: "#f8fbff",
+                  fontSize: { xs: "1.45rem", md: "2rem" },
+                  fontWeight: 800,
+                  lineHeight: 1.1,
+                  mt: 0.5,
+                  overflowWrap: "anywhere",
+                  textShadow: "0 2px 18px rgba(0, 0, 0, 0.68)",
+                }}
+              >
+                {activeGuild.name}
+              </Typography>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 1.25 }}>
+                <Chip
+                  label={`${activeGuild.members.length} ${t.members}`}
+                  size="small"
+                  sx={{ bgcolor: hexToRgba(channelAppearance.accent, 0.18), color: "#f8fbff", fontWeight: 800 }}
+                />
+                <Chip
+                  label={`/${activeGuild.slug}`}
+                  size="small"
+                  sx={{ bgcolor: "rgba(2, 8, 18, 0.42)", color: "#bfdbfe", fontWeight: 700 }}
+                />
+              </Box>
+            </Box>
+
+            <Button
+              component={Link}
+              href="/guilds"
+              sx={{
+                alignSelf: "center",
+                borderColor: hexToRgba(channelAppearance.accent, 0.72),
+                color: "#f8fbff",
+                display: { xs: "none", md: "inline-flex" },
+                fontWeight: 800,
+                justifySelf: "end",
+                px: 3,
+                textTransform: "none",
+                "&:hover": {
+                  bgcolor: hexToRgba(channelAppearance.accent, 0.12),
+                  borderColor: channelAppearance.accent,
+                },
+              }}
               variant="outlined"
-            />
-            <Chip
-              color={isApiConnected ? "primary" : "warning"}
-              label={apiStatus}
-              sx={{ fontWeight: 700, maxWidth: "100%" }}
-              variant="outlined"
-            />
+            >
+              {t.guilds}
+            </Button>
           </Box>
-        </Box>
+        ) : null}
 
         {isAuthenticated ? (
           <>
@@ -738,7 +832,7 @@ export default function Home() {
                 gap: 1.75,
                 minHeight: 0,
                 overflowY: "auto",
-                py: 3.5,
+                py: activeGuild ? 1.5 : 3.5,
               }}
             >
               {messages.map((message) => {

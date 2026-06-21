@@ -29,6 +29,7 @@ export const sv = {
   globalChat: "Global chatt",
   guildLimit: "Du kan vara medlem i upp till 3 gillen.",
   guildAppearance: "Gillesutseende",
+  guildBackground: "Gillesbakgrund",
   guildName: "Gillesnamn",
   guilds: "Gillen",
   inviteToGuild: "Bjud in till",

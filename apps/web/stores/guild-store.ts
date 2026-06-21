@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { defaultGuildEmblemUrl, defaultGuildThemeColor, GuildThemeColor } from "../lib/guild-flags";
+import { defaultGuildBackgroundUrl, defaultGuildEmblemUrl, defaultGuildThemeColor, GuildThemeColor } from "../lib/guild-flags";
 
 export type GuildRole = "owner" | "officer" | "member";
 export type JoinRequestStatus = "pending" | "accepted" | "rejected";
@@ -13,6 +13,7 @@ export type Guild = {
   inviteCodes: string[];
   themeColor: GuildThemeColor;
   emblemUrl: string;
+  backgroundUrl: string;
   createdAt: string;
   membership: {
     role: GuildRole | null;
@@ -41,6 +42,7 @@ type GuildState = {
   guilds: Guild[];
   isLoading: boolean;
   joinRequestsByGuildId: Record<string, GuildJoinRequest[]>;
+  backgroundUrl: string;
   emblemUrl: string;
   name: string;
   themeColor: GuildThemeColor;
@@ -51,10 +53,18 @@ type GuildState = {
   loadGuilds: (apiBaseUrl: string, accessToken: string) => Promise<void>;
   loadJoinRequests: (apiBaseUrl: string, accessToken: string, guildId: string) => Promise<void>;
   requestJoin: (apiBaseUrl: string, accessToken: string, guildId: string) => Promise<void>;
+  setBackgroundUrl: (backgroundUrl: string) => void;
   setEmblemUrl: (emblemUrl: string) => void;
   setName: (name: string) => void;
   setThemeColor: (themeColor: GuildThemeColor, emblemUrl: string) => void;
-  updateGuildAppearance: (apiBaseUrl: string, accessToken: string, guildId: string, themeColor: GuildThemeColor, emblemUrl: string) => Promise<void>;
+  updateGuildAppearance: (
+    apiBaseUrl: string,
+    accessToken: string,
+    guildId: string,
+    themeColor: GuildThemeColor,
+    emblemUrl: string,
+    backgroundUrl: string,
+  ) => Promise<void>;
 };
 
 async function getErrorMessage(response: Response) {
@@ -85,6 +95,7 @@ export const useGuildStore = create<GuildState>((set, get) => ({
   guilds: [],
   isLoading: false,
   joinRequestsByGuildId: {},
+  backgroundUrl: defaultGuildBackgroundUrl,
   emblemUrl: defaultGuildEmblemUrl,
   name: "",
   themeColor: defaultGuildThemeColor,
@@ -115,7 +126,7 @@ export const useGuildStore = create<GuildState>((set, get) => ({
   },
   createGuild: async (apiBaseUrl, accessToken) => {
     const name = get().name.trim();
-    const { emblemUrl, themeColor } = get();
+    const { backgroundUrl, emblemUrl, themeColor } = get();
 
     if (!name) {
       return;
@@ -125,7 +136,7 @@ export const useGuildStore = create<GuildState>((set, get) => ({
 
     try {
       const response = await fetch(`${apiBaseUrl}/guilds`, {
-        body: JSON.stringify({ emblemUrl, name, themeColor }),
+        body: JSON.stringify({ backgroundUrl, emblemUrl, name, themeColor }),
         headers: authHeaders(accessToken),
         method: "POST",
       });
@@ -135,7 +146,15 @@ export const useGuildStore = create<GuildState>((set, get) => ({
       }
 
       const guild = (await response.json()) as Guild;
-      set((state) => ({ emblemUrl: defaultGuildEmblemUrl, error: null, guilds: upsertGuild(state.guilds, guild), isLoading: false, name: "", themeColor: defaultGuildThemeColor }));
+      set((state) => ({
+        backgroundUrl: defaultGuildBackgroundUrl,
+        emblemUrl: defaultGuildEmblemUrl,
+        error: null,
+        guilds: upsertGuild(state.guilds, guild),
+        isLoading: false,
+        name: "",
+        themeColor: defaultGuildThemeColor,
+      }));
     } catch (error) {
       set({ error: error instanceof Error ? error.message : "Guild creation failed", isLoading: false });
     }
@@ -249,15 +268,16 @@ export const useGuildStore = create<GuildState>((set, get) => ({
       set({ error: error instanceof Error ? error.message : "Join request failed", isLoading: false });
     }
   },
+  setBackgroundUrl: (backgroundUrl) => set({ backgroundUrl }),
   setEmblemUrl: (emblemUrl) => set({ emblemUrl }),
   setName: (name) => set({ name }),
   setThemeColor: (themeColor, emblemUrl) => set({ emblemUrl, themeColor }),
-  updateGuildAppearance: async (apiBaseUrl, accessToken, guildId, themeColor, emblemUrl) => {
+  updateGuildAppearance: async (apiBaseUrl, accessToken, guildId, themeColor, emblemUrl, backgroundUrl) => {
     set({ error: null, isLoading: true });
 
     try {
       const response = await fetch(`${apiBaseUrl}/guilds/${guildId}/appearance`, {
-        body: JSON.stringify({ emblemUrl, themeColor }),
+        body: JSON.stringify({ backgroundUrl, emblemUrl, themeColor }),
         headers: authHeaders(accessToken),
         method: "PATCH",
       });
