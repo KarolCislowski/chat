@@ -655,6 +655,9 @@ export default function Home() {
         id="current"
         aria-label={activeChannelTitle}
         sx={{
+          "--scrollbar-thumb": hexToRgba(channelAppearance.accent, 0.52),
+          "--scrollbar-thumb-hover": hexToRgba(channelAppearance.accent, 0.76),
+          "--scrollbar-track": "rgba(2, 8, 18, 0.42)",
           bgcolor: channelAppearance.pageBg,
           borderLeft: "1px solid rgba(96, 165, 250, 0.08)",
           borderRight: { lg: "1px solid rgba(96, 165, 250, 0.08)" },
