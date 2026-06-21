@@ -5,7 +5,7 @@ import { Model, Types } from "mongoose";
 import { UserProfile, UserProfileDocument } from "../users/schemas/user-profile.schema";
 import { Guild, GuildDocument, GuildThemeColor } from "./schemas/guild.schema";
 import { GuildJoinRequest, GuildJoinRequestDocument } from "./schemas/guild-join-request.schema";
-import { GuildMembership, GuildMembershipDocument } from "./schemas/guild-membership.schema";
+import { GuildMembership, GuildMembershipDocument, GuildRole } from "./schemas/guild-membership.schema";
 
 const MAX_GUILDS_PER_USER = 3;
 const DEFAULT_GUILD_THEME_COLOR: GuildThemeColor = "red";
@@ -60,7 +60,9 @@ export class GuildsService {
       throw new NotFoundException("Guild was not found.");
     }
 
-    return this.toGuildResponse(guild, membership.role);
+    const memberships = await this.membershipModel.find({ guildId }).sort({ joinedAt: 1 }).exec();
+
+    return this.toGuildDetailsResponse(guild, membership.role, memberships);
   }
 
   async getMyGuilds(accountId: string) {
@@ -75,6 +77,28 @@ export class GuildsService {
         return guild ? this.toGuildResponse(guild, membership.role) : null;
       })
       .filter((guild) => guild !== null);
+  }
+
+  async getGuildDetails(accountId: string, guildId: string) {
+    if (!Types.ObjectId.isValid(guildId)) {
+      throw new NotFoundException("Guild was not found.");
+    }
+
+    const [guild, requesterMembership, memberships] = await Promise.all([
+      this.guildModel.findById(guildId).exec(),
+      this.membershipModel.findOne({ guildId, userId: accountId }).exec(),
+      this.membershipModel.find({ guildId }).sort({ joinedAt: 1 }).exec(),
+    ]);
+
+    if (!guild) {
+      throw new NotFoundException("Guild was not found.");
+    }
+
+    if (!requesterMembership) {
+      throw new ForbiddenException("You are not a member of this guild.");
+    }
+
+    return this.toGuildDetailsResponse(guild, requesterMembership.role, memberships);
   }
 
   async getGuildIdsForUser(accountId: string) {
@@ -210,6 +234,60 @@ export class GuildsService {
     return this.toGuildResponse(guild, membership.role);
   }
 
+  async updateMemberRole(accountId: string, guildId: string, userId: string, role: Exclude<GuildRole, "owner">) {
+    await this.assertGuildOwner(accountId, guildId);
+
+    if (!Types.ObjectId.isValid(userId)) {
+      throw new NotFoundException("User was not found.");
+    }
+
+    if (accountId === userId) {
+      throw new BadRequestException("Guild owner role cannot be changed.");
+    }
+
+    const membership = await this.membershipModel.findOne({ guildId, userId }).exec();
+
+    if (!membership) {
+      throw new NotFoundException("Guild member was not found.");
+    }
+
+    if (membership.role === "owner") {
+      throw new BadRequestException("Guild owner role cannot be changed.");
+    }
+
+    membership.role = role;
+    await membership.save();
+
+    return this.getGuildDetails(accountId, guildId);
+  }
+
+  async removeMember(accountId: string, guildId: string, userId: string) {
+    await this.assertGuildOwner(accountId, guildId);
+
+    if (!Types.ObjectId.isValid(userId)) {
+      throw new NotFoundException("User was not found.");
+    }
+
+    if (accountId === userId) {
+      throw new BadRequestException("Guild owner cannot be removed.");
+    }
+
+    const membership = await this.membershipModel.findOne({ guildId, userId }).exec();
+
+    if (!membership) {
+      throw new NotFoundException("Guild member was not found.");
+    }
+
+    if (membership.role === "owner") {
+      throw new BadRequestException("Guild owner cannot be removed.");
+    }
+
+    await this.membershipModel.deleteOne({ _id: membership._id }).exec();
+    await this.guildModel.updateOne({ _id: guildId }, { $pull: { members: new Types.ObjectId(userId) } }).exec();
+
+    return this.getGuildDetails(accountId, guildId);
+  }
+
   async requestJoin(accountId: string, guildId: string) {
     await this.assertMembershipLimit(accountId);
 
@@ -314,6 +392,24 @@ export class GuildsService {
     return membership;
   }
 
+  private async assertGuildOwner(accountId: string, guildId: string) {
+    if (!Types.ObjectId.isValid(guildId)) {
+      throw new NotFoundException("Guild was not found.");
+    }
+
+    const membership = await this.membershipModel.findOne({ guildId, userId: accountId }).exec();
+
+    if (!membership) {
+      throw new ForbiddenException("You are not a member of this guild.");
+    }
+
+    if (membership.role !== "owner") {
+      throw new ForbiddenException("Only guild owners can manage member roles.");
+    }
+
+    return membership;
+  }
+
   private async createUniqueSlug(name: string) {
     const baseSlug = this.slugify(name);
     let slug = baseSlug;
@@ -366,6 +462,34 @@ export class GuildsService {
       membership: {
         role,
       },
+    };
+  }
+
+  private async toGuildDetailsResponse(guild: GuildDocument, role: GuildMembershipDocument["role"], memberships: GuildMembershipDocument[]) {
+    const accountIds = memberships.map((membership) => membership.userId);
+    const profiles = await this.profileModel.find({ accountId: { $in: accountIds } }).exec();
+    const profilesByAccountId = new Map(profiles.map((profile) => [profile.accountId.toString(), profile]));
+
+    return {
+      ...this.toGuildResponse(guild, role),
+      memberProfiles: memberships.map((membership) => {
+        const profile = profilesByAccountId.get(membership.userId.toString());
+
+        return {
+          userId: membership.userId.toString(),
+          role: membership.role,
+          joinedAt: membership.joinedAt,
+          user: profile
+            ? {
+                id: profile.accountId.toString(),
+                displayName: profile.displayName,
+                avatarUrl: profile.avatarUrl,
+                onlineStatus: profile.onlineStatus,
+                statusMessage: profile.statusMessage,
+              }
+            : null,
+        };
+      }),
     };
   }
 

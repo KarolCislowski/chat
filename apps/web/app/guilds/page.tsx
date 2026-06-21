@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect } from "react";
-import { Alert, Box, Button, Chip, Paper, TextField, Typography } from "@mui/material";
+import { FormEvent, useEffect, useState } from "react";
+import { Alert, Box, Button, Chip, Paper, TextField, Tooltip, Typography } from "@mui/material";
 import { PageFrame } from "../../components/layout/page-frame";
 import {
   getGuildFlagSet,
@@ -55,19 +55,17 @@ const fieldSx = {
 };
 
 function GuildEmblem({ guild, size = 42 }: { guild: Pick<Guild, "emblemUrl" | "name" | "themeColor">; size?: number }) {
-  const accent = getGuildThemeAccent(guild.themeColor);
-
   return (
     <Box
       component="img"
       alt={guild.name}
       src={resolveGuildEmblemUrl(guild.emblemUrl, guild.themeColor)}
       sx={{
-        border: `1px solid ${accent}88`,
         flex: "0 0 auto",
-        height: size,
-        objectFit: "cover",
-        width: size,
+        filter: "drop-shadow(0 8px 12px rgba(0, 0, 0, 0.45))",
+        height: size * 1.35,
+        objectFit: "contain",
+        width: size * 0.9,
       }}
     />
   );
@@ -131,26 +129,40 @@ function GuildAppearancePicker({
           const isSelected = flagPath === emblemUrl;
 
           return (
-            <Button
-              aria-label={flagPath}
-              disabled={disabled}
+            <Tooltip
               key={flagPath}
-              onClick={() => onChange(flagSet.label, flagPath)}
-              sx={{
-                border: "1px solid",
-                borderColor: isSelected ? `${flagSet.accent}` : "rgba(96, 165, 250, 0.12)",
-                borderRadius: 1,
-                minWidth: 0,
-                p: 0.35,
-                "&:hover": {
-                  bgcolor: "rgba(96, 165, 250, 0.1)",
-                  borderColor: flagSet.accent,
-                },
-              }}
-              type="button"
+              placement="top"
+              slotProps={{ tooltip: { sx: { bgcolor: "transparent", maxWidth: "none", p: 0 } } }}
+              title={
+                <Box sx={{ bgcolor: "rgba(2, 8, 18, 0.92)", border: `1px solid ${flagSet.accent}66`, borderRadius: 1, p: 1 }}>
+                  <Box component="img" alt="" src={flagPath} sx={{ display: "block", height: 190, objectFit: "contain", width: 128 }} />
+                </Box>
+              }
             >
-              <Box component="img" alt="" src={flagPath} sx={{ display: "block", height: 38, objectFit: "cover", width: 38 }} />
-            </Button>
+              <Box component="span" sx={{ display: "block" }}>
+                <Button
+                  aria-label={flagPath}
+                  disabled={disabled}
+                  onClick={() => onChange(flagSet.label, flagPath)}
+                  sx={{
+                    bgcolor: isSelected ? "rgba(248, 251, 255, 0.08)" : "transparent",
+                    border: "1px solid",
+                    borderColor: isSelected ? `${flagSet.accent}` : "transparent",
+                    borderRadius: 1,
+                    minWidth: 0,
+                    p: 0.35,
+                    width: "100%",
+                    "&:hover": {
+                      bgcolor: "rgba(96, 165, 250, 0.1)",
+                      borderColor: flagSet.accent,
+                    },
+                  }}
+                  type="button"
+                >
+                  <Box component="img" alt="" src={flagPath} sx={{ display: "block", height: 52, objectFit: "contain", width: 34 }} />
+                </Button>
+              </Box>
+            </Tooltip>
           );
         })}
       </Box>
@@ -184,30 +196,43 @@ function GuildBackgroundPicker({
         const isSelected = option === resolvedBackgroundUrl;
 
         return (
-          <Button
-            aria-label={option}
-            disabled={disabled}
+          <Tooltip
             key={option}
-            onClick={() => onChange(option)}
-            sx={{
-              aspectRatio: "16 / 9",
-              backgroundImage: `linear-gradient(180deg, rgba(3, 10, 20, 0.08), rgba(3, 10, 20, 0.38)), url(${option})`,
-              backgroundPosition: "center",
-              backgroundSize: "cover",
-              border: "1px solid",
-              borderColor: isSelected ? "#f8fbff" : "rgba(96, 165, 250, 0.16)",
-              borderRadius: 1,
-              boxShadow: isSelected ? "0 0 0 2px rgba(96, 165, 250, 0.32)" : "none",
-              minWidth: 0,
-              overflow: "hidden",
-              p: 0,
-              "&:hover": {
-                borderColor: "#60a5fa",
-                filter: "brightness(1.08)",
-              },
-            }}
-            type="button"
-          />
+            placement="top"
+            slotProps={{ tooltip: { sx: { bgcolor: "transparent", maxWidth: "none", p: 0 } } }}
+            title={
+              <Box sx={{ bgcolor: "rgba(2, 8, 18, 0.92)", border: "1px solid rgba(96, 165, 250, 0.38)", borderRadius: 1, p: 1 }}>
+                <Box component="img" alt="" src={option} sx={{ display: "block", height: 180, objectFit: "cover", width: 320 }} />
+              </Box>
+            }
+          >
+            <Box component="span" sx={{ display: "block" }}>
+              <Button
+                aria-label={option}
+                disabled={disabled}
+                onClick={() => onChange(option)}
+                sx={{
+                  aspectRatio: "16 / 9",
+                  backgroundImage: `linear-gradient(180deg, rgba(3, 10, 20, 0.08), rgba(3, 10, 20, 0.38)), url(${option})`,
+                  backgroundPosition: "center",
+                  backgroundSize: "cover",
+                  border: "1px solid",
+                  borderColor: isSelected ? "#f8fbff" : "rgba(96, 165, 250, 0.16)",
+                  borderRadius: 1,
+                  boxShadow: isSelected ? "0 0 0 2px rgba(96, 165, 250, 0.32)" : "none",
+                  minWidth: 0,
+                  overflow: "hidden",
+                  p: 0,
+                  width: "100%",
+                  "&:hover": {
+                    borderColor: "#60a5fa",
+                    filter: "brightness(1.08)",
+                  },
+                }}
+                type="button"
+              />
+            </Box>
+          </Tooltip>
         );
       })}
     </Box>
@@ -243,6 +268,8 @@ export default function GuildsPage() {
   const updateGuildAppearance = useGuildStore((state) => state.updateGuildAppearance);
   const t = useLanguageStore((state) => state.t);
   const isAuthenticated = Boolean(profile && tokens?.accessToken);
+  const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
+  const [editingGuildId, setEditingGuildId] = useState<string | null>(null);
 
   useEffect(() => {
     if (hasHydrated && !isAuthenticated) {
@@ -295,6 +322,7 @@ export default function GuildsPage() {
 
     if (accessToken) {
       await createGuild(apiBaseUrl, accessToken);
+      setIsCreateFormOpen(false);
       void loadAvailableGuilds(apiBaseUrl, accessToken);
     }
   }
@@ -360,64 +388,89 @@ export default function GuildsPage() {
           </Button>
         </Box>
 
-        <Paper component="form" onSubmit={handleCreateGuild} sx={{ ...panelSx, display: "grid", gap: 1.5, p: 2.5 }}>
-          <Typography component="h2" sx={{ color: "#f0b35f", fontSize: "1.05rem", fontWeight: 800, letterSpacing: 0.4 }}>
-            {t.createGuild}
-          </Typography>
-          <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "minmax(0, 1fr) 320px" } }}>
-            <TextField disabled={isLoading} fullWidth label={t.guildName} onChange={(event) => setName(event.target.value)} required sx={fieldSx} value={name} />
-            <Box
-              sx={{
-                alignItems: "center",
-                backgroundImage: `linear-gradient(90deg, rgba(3, 10, 20, 0.82), rgba(3, 10, 20, 0.42)), url(${resolveGuildBackgroundUrl(backgroundUrl)})`,
-                backgroundPosition: "center",
-                backgroundSize: "cover",
-                border: "1px solid rgba(96, 165, 250, 0.16)",
-                borderRadius: 1,
-                display: "flex",
-                gap: 1.25,
-                minHeight: 72,
-                p: 1,
-              }}
-            >
-              <Box component="img" alt="" src={resolveGuildEmblemUrl(emblemUrl, themeColor)} sx={{ height: 62, objectFit: "contain", width: 42 }} />
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography sx={{ color: "#7dd3fc", fontSize: "0.72rem", fontWeight: 800, letterSpacing: 1, textTransform: "uppercase" }}>
-                  {t.guildAppearance}
-                </Typography>
-                <Typography sx={{ color: "#8ca3ba", fontSize: "0.85rem" }}>{themeColor}</Typography>
-              </Box>
+        {!isCreateFormOpen ? (
+          <Paper sx={{ ...panelSx, alignItems: { xs: "stretch", sm: "center" }, display: "flex", gap: 1.5, justifyContent: "space-between", p: 2 }}>
+            <Box>
+              <Typography component="h2" sx={{ color: "#f0b35f", fontSize: "1.05rem", fontWeight: 800, letterSpacing: 0.4 }}>
+                {t.createGuild}
+              </Typography>
+              <Typography sx={{ color: "#8ca3ba", fontSize: "0.85rem", mt: 0.35 }}>{t.guildLimit}</Typography>
             </Box>
-          </Box>
-          <GuildAppearancePicker
-            disabled={isLoading}
-            emblemUrl={emblemUrl}
-            onChange={(nextThemeColor, nextEmblemUrl) => {
-              setThemeColor(nextThemeColor, nextEmblemUrl);
-              setEmblemUrl(nextEmblemUrl);
-            }}
-            themeColor={themeColor}
-          />
-          <Box sx={{ display: "grid", gap: 1 }}>
-            <Typography sx={{ color: "#7dd3fc", fontSize: "0.72rem", fontWeight: 800, letterSpacing: 1, textTransform: "uppercase" }}>
-              {t.guildBackground}
-            </Typography>
-            <GuildBackgroundPicker backgroundUrl={backgroundUrl} disabled={isLoading} onChange={setBackgroundUrl} />
-          </Box>
-          <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
             <Button
               disabled={isLoading || guilds.length >= 3}
-              sx={{ bgcolor: "#1d4ed8", fontWeight: 800, minWidth: { sm: 160 }, textTransform: "none", "&:hover": { bgcolor: "#2563eb" } }}
-              type="submit"
-              variant="contained"
+              onClick={() => setIsCreateFormOpen(true)}
+              sx={{ borderColor: "rgba(96, 165, 250, 0.45)", color: "#7dd3fc", fontWeight: 800, minWidth: { sm: 160 }, textTransform: "none" }}
+              type="button"
+              variant="outlined"
             >
-              {t.createGuild}
+              + {t.createGuild}
             </Button>
-          </Box>
-          <Typography sx={{ color: "#8ca3ba", fontSize: "0.85rem" }}>
-            {t.guildLimit}
-          </Typography>
-        </Paper>
+          </Paper>
+        ) : (
+          <Paper component="form" onSubmit={handleCreateGuild} sx={{ ...panelSx, display: "grid", gap: 1.5, p: 2.5 }}>
+            <Box sx={{ alignItems: "center", display: "flex", gap: 1.5, justifyContent: "space-between" }}>
+              <Typography component="h2" sx={{ color: "#f0b35f", fontSize: "1.05rem", fontWeight: 800, letterSpacing: 0.4 }}>
+                {t.createGuild}
+              </Typography>
+              <Button disabled={isLoading} onClick={() => setIsCreateFormOpen(false)} sx={{ color: "#9badbf", fontWeight: 800, textTransform: "none" }} type="button">
+                {t.cancel}
+              </Button>
+            </Box>
+            <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "minmax(0, 1fr) 320px" } }}>
+              <TextField disabled={isLoading} fullWidth label={t.guildName} onChange={(event) => setName(event.target.value)} required sx={fieldSx} value={name} />
+              <Box
+                sx={{
+                  alignItems: "center",
+                  backgroundImage: `linear-gradient(90deg, rgba(3, 10, 20, 0.82), rgba(3, 10, 20, 0.42)), url(${resolveGuildBackgroundUrl(backgroundUrl)})`,
+                  backgroundPosition: "center",
+                  backgroundSize: "cover",
+                  border: "1px solid rgba(96, 165, 250, 0.16)",
+                  borderRadius: 1,
+                  display: "flex",
+                  gap: 1.25,
+                  minHeight: 72,
+                  p: 1,
+                }}
+              >
+                <Box component="img" alt="" src={resolveGuildEmblemUrl(emblemUrl, themeColor)} sx={{ height: 62, objectFit: "contain", width: 42 }} />
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography sx={{ color: "#7dd3fc", fontSize: "0.72rem", fontWeight: 800, letterSpacing: 1, textTransform: "uppercase" }}>
+                    {t.guildAppearance}
+                  </Typography>
+                  <Typography sx={{ color: "#8ca3ba", fontSize: "0.85rem" }}>{themeColor}</Typography>
+                </Box>
+              </Box>
+            </Box>
+            <GuildAppearancePicker
+              disabled={isLoading}
+              emblemUrl={emblemUrl}
+              onChange={(nextThemeColor, nextEmblemUrl) => {
+                setThemeColor(nextThemeColor, nextEmblemUrl);
+                setEmblemUrl(nextEmblemUrl);
+              }}
+              themeColor={themeColor}
+            />
+            <Box sx={{ display: "grid", gap: 1 }}>
+              <Typography sx={{ color: "#7dd3fc", fontSize: "0.72rem", fontWeight: 800, letterSpacing: 1, textTransform: "uppercase" }}>
+                {t.guildBackground}
+              </Typography>
+              <GuildBackgroundPicker backgroundUrl={backgroundUrl} disabled={isLoading} onChange={setBackgroundUrl} />
+            </Box>
+            <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+              <Button
+                disabled={isLoading || guilds.length >= 3}
+                sx={{ bgcolor: "#1d4ed8", fontWeight: 800, minWidth: { sm: 160 }, textTransform: "none", "&:hover": { bgcolor: "#2563eb" } }}
+                type="submit"
+                variant="contained"
+              >
+                {t.createGuild}
+              </Button>
+            </Box>
+            <Typography sx={{ color: "#8ca3ba", fontSize: "0.85rem" }}>
+              {t.guildLimit}
+            </Typography>
+          </Paper>
+        )}
 
         {error ? (
           <Alert severity="warning" variant="outlined">
@@ -434,6 +487,7 @@ export default function GuildsPage() {
             {guilds.map((guild) => {
               const joinRequests = joinRequestsByGuildId[guild._id] ?? [];
               const guildBackgroundUrl = resolveGuildBackgroundUrl(guild.backgroundUrl);
+              const isEditingGuild = editingGuildId === guild._id;
 
               return (
                 <Paper
@@ -458,12 +512,23 @@ export default function GuildsPage() {
                         <Typography sx={{ color: "#8ca3ba", fontSize: "0.82rem" }}>/{guild.slug}</Typography>
                       </Box>
                     </Box>
-                    <Chip
-                      label={guild.membership.role}
-                      size="small"
-                      sx={{ borderColor: "rgba(96, 165, 250, 0.34)", color: "#bfdbfe", fontWeight: 800 }}
-                      variant="outlined"
-                    />
+                    <Box sx={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: 1, justifyContent: "flex-end" }}>
+                      <Button
+                        component={Link}
+                        href={`/guilds/${guild._id}`}
+                        size="small"
+                        sx={{ color: "#7dd3fc", fontWeight: 800, textTransform: "none" }}
+                        type="button"
+                      >
+                        {t.guildDetails}
+                      </Button>
+                      <Chip
+                        label={guild.membership.role}
+                        size="small"
+                        sx={{ borderColor: "rgba(96, 165, 250, 0.34)", color: "#bfdbfe", fontWeight: 800 }}
+                        variant="outlined"
+                      />
+                    </Box>
                   </Box>
 
                   <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
@@ -513,30 +578,52 @@ export default function GuildsPage() {
 
                   {canManageGuild(guild) ? (
                     <Box sx={{ display: "grid", gap: 1 }}>
-                      <Typography sx={{ color: "#7dd3fc", fontSize: "0.72rem", fontWeight: 800, letterSpacing: 1, textTransform: "uppercase" }}>
-                        {t.guildAppearance}
-                      </Typography>
-                      <GuildAppearancePicker
-                        disabled={isLoading}
-                        emblemUrl={resolveGuildEmblemUrl(guild.emblemUrl, guild.themeColor)}
-                        onChange={(nextThemeColor, nextEmblemUrl) => void handleUpdateAppearance(guild._id, nextThemeColor, nextEmblemUrl, guildBackgroundUrl)}
-                        themeColor={guild.themeColor}
-                      />
-                      <Typography sx={{ color: "#7dd3fc", fontSize: "0.72rem", fontWeight: 800, letterSpacing: 1, textTransform: "uppercase" }}>
-                        {t.guildBackground}
-                      </Typography>
-                      <GuildBackgroundPicker
-                        backgroundUrl={guildBackgroundUrl}
-                        disabled={isLoading}
-                        onChange={(nextBackgroundUrl) =>
-                          void handleUpdateAppearance(
-                            guild._id,
-                            guild.themeColor,
-                            resolveGuildEmblemUrl(guild.emblemUrl, guild.themeColor),
-                            nextBackgroundUrl,
-                          )
-                        }
-                      />
+                      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                        {isEditingGuild ? (
+                          <Button disabled={isLoading} onClick={() => setEditingGuildId(null)} sx={{ color: "#9badbf", fontWeight: 800, textTransform: "none" }} type="button">
+                            {t.cancel}
+                          </Button>
+                        ) : (
+                          <Button
+                            disabled={isLoading}
+                            onClick={() => setEditingGuildId(guild._id)}
+                            sx={{ borderColor: "rgba(96, 165, 250, 0.36)", color: "#7dd3fc", fontWeight: 800, textTransform: "none" }}
+                            type="button"
+                            variant="outlined"
+                          >
+                            {t.editGuild}
+                          </Button>
+                        )}
+                      </Box>
+
+                      {isEditingGuild ? (
+                        <>
+                          <Typography sx={{ color: "#7dd3fc", fontSize: "0.72rem", fontWeight: 800, letterSpacing: 1, textTransform: "uppercase" }}>
+                            {t.guildAppearance}
+                          </Typography>
+                          <GuildAppearancePicker
+                            disabled={isLoading}
+                            emblemUrl={resolveGuildEmblemUrl(guild.emblemUrl, guild.themeColor)}
+                            onChange={(nextThemeColor, nextEmblemUrl) => void handleUpdateAppearance(guild._id, nextThemeColor, nextEmblemUrl, guildBackgroundUrl)}
+                            themeColor={guild.themeColor}
+                          />
+                          <Typography sx={{ color: "#7dd3fc", fontSize: "0.72rem", fontWeight: 800, letterSpacing: 1, textTransform: "uppercase" }}>
+                            {t.guildBackground}
+                          </Typography>
+                          <GuildBackgroundPicker
+                            backgroundUrl={guildBackgroundUrl}
+                            disabled={isLoading}
+                            onChange={(nextBackgroundUrl) =>
+                              void handleUpdateAppearance(
+                                guild._id,
+                                guild.themeColor,
+                                resolveGuildEmblemUrl(guild.emblemUrl, guild.themeColor),
+                                nextBackgroundUrl,
+                              )
+                            }
+                          />
+                        </>
+                      ) : null}
                     </Box>
                   ) : null}
                 </Paper>

@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { AuthenticatedRequest } from "../auth/types/authenticated-request";
 import { CreateGuildDto } from "./dto/create-guild.dto";
 import { InviteGuildMemberDto } from "./dto/invite-guild-member.dto";
 import { JoinGuildDto } from "./dto/join-guild.dto";
 import { UpdateGuildAppearanceDto } from "./dto/update-guild-appearance.dto";
+import { UpdateGuildMemberRoleDto } from "./dto/update-guild-member-role.dto";
 import { GuildsService } from "./guilds.service";
 
 @UseGuards(JwtAuthGuard)
@@ -20,6 +21,11 @@ export class GuildsController {
   @Get("available")
   getAvailableGuilds(@Req() request: AuthenticatedRequest) {
     return this.guildsService.getAvailableGuilds(request.user.accountId);
+  }
+
+  @Get(":guildId")
+  getGuildDetails(@Req() request: AuthenticatedRequest, @Param("guildId") guildId: string) {
+    return this.guildsService.getGuildDetails(request.user.accountId, guildId);
   }
 
   @Post()
@@ -45,6 +51,21 @@ export class GuildsController {
   @Post(":guildId/members")
   inviteMember(@Req() request: AuthenticatedRequest, @Param("guildId") guildId: string, @Body() dto: InviteGuildMemberDto) {
     return this.guildsService.inviteMember(request.user.accountId, guildId, dto.userId);
+  }
+
+  @Patch(":guildId/members/:userId/role")
+  updateMemberRole(
+    @Req() request: AuthenticatedRequest,
+    @Param("guildId") guildId: string,
+    @Param("userId") userId: string,
+    @Body() dto: UpdateGuildMemberRoleDto,
+  ) {
+    return this.guildsService.updateMemberRole(request.user.accountId, guildId, userId, dto.role);
+  }
+
+  @Delete(":guildId/members/:userId")
+  removeMember(@Req() request: AuthenticatedRequest, @Param("guildId") guildId: string, @Param("userId") userId: string) {
+    return this.guildsService.removeMember(request.user.accountId, guildId, userId);
   }
 
   @Get(":guildId/join-requests")
