@@ -3,11 +3,14 @@ import { HydratedDocument, Schema as MongooseSchema, Types } from "mongoose";
 import { UserAccount } from "../../users/schemas/user-account.schema";
 import { Guild } from "./guild.schema";
 
+/** Lifecycle state for a request to join a guild. */
 export type GuildJoinRequestStatus = "pending" | "accepted" | "rejected";
 
+/** Hydrated Mongo document for a guild join request. */
 export type GuildJoinRequestDocument = HydratedDocument<GuildJoinRequest>;
 
 @Schema({ timestamps: { createdAt: true, updatedAt: false } })
+/** Persistent request submitted by a user who wants to join a guild. */
 export class GuildJoinRequest {
   @Prop({ ref: Guild.name, required: true, type: MongooseSchema.Types.ObjectId })
   guildId!: Types.ObjectId;
@@ -27,6 +30,7 @@ export class GuildJoinRequest {
   createdAt!: Date;
 }
 
+/** Mongoose schema for guild join request documents. */
 export const GuildJoinRequestSchema = SchemaFactory.createForClass(GuildJoinRequest);
 
 GuildJoinRequestSchema.index({ guildId: 1, status: 1, createdAt: -1 });

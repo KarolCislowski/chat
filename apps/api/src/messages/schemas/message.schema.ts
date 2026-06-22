@@ -2,11 +2,14 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { HydratedDocument, Schema as MongooseSchema, Types } from "mongoose";
 import { UserAccount } from "../../users/schemas/user-account.schema";
 
+/** Chat channel categories persisted by the message collection. */
 export type ChannelType = "global" | "guild" | "whisper";
 
+/** Hydrated Mongo document for a chat message. */
 export type MessageDocument = HydratedDocument<Message>;
 
 @Schema({ timestamps: { createdAt: true, updatedAt: false } })
+/** Persistent chat message for global, guild, and whisper channels. */
 export class Message {
   @Prop({ ref: UserAccount.name, required: true, type: MongooseSchema.Types.ObjectId })
   senderId!: Types.ObjectId;
@@ -35,6 +38,7 @@ export class Message {
   createdAt!: Date;
 }
 
+/** Mongoose schema for chat message documents. */
 export const MessageSchema = SchemaFactory.createForClass(Message);
 
 MessageSchema.index({ channelType: 1, createdAt: -1 });

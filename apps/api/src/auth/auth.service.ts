@@ -9,12 +9,14 @@ import { LoginDto } from "./dto/login.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
 import { RegisterDto } from "./dto/register.dto";
 
+/** Access and refresh token pair issued after auth operations. */
 type TokenPair = {
   accessToken: string;
   refreshToken: string;
 };
 
 @Injectable()
+/** Handles credential validation, token issuing, refresh rotation, and logout. */
 export class AuthService {
   private readonly accessTokenTtl: JwtSignOptions["expiresIn"];
   private readonly bcryptRounds: number;
@@ -30,6 +32,12 @@ export class AuthService {
     this.refreshTokenTtl = this.configService.get<string>("JWT_REFRESH_TOKEN_TTL", "7d") as JwtSignOptions["expiresIn"];
   }
 
+  /**
+   * Creates a user account and returns an authenticated session.
+   *
+   * @param dto - Registration payload with email, password, and display name.
+   * @returns Auth response containing account, profile, and token pair.
+   */
   async register(dto: RegisterDto) {
     const passwordHash = await bcrypt.hash(dto.password, this.bcryptRounds);
     const { account, profile } = await this.usersService.createAccount({
@@ -44,6 +52,12 @@ export class AuthService {
     return this.toAuthResponse(account, profile, tokens);
   }
 
+  /**
+   * Validates credentials and returns a new authenticated session.
+   *
+   * @param dto - Login payload with email and password.
+   * @returns Auth response containing account, profile, and token pair.
+   */
   async login(dto: LoginDto) {
     const account = await this.usersService.findAccountByEmail(dto.email);
 
@@ -69,6 +83,12 @@ export class AuthService {
     return this.toAuthResponse(account, profile, tokens);
   }
 
+  /**
+   * Rotates a valid refresh token and issues a fresh token pair.
+   *
+   * @param dto - Refresh payload containing the current refresh token.
+   * @returns Auth response containing account, profile, and rotated token pair.
+   */
   async refresh(dto: RefreshTokenDto) {
     const payload = await this.verifyRefreshToken(dto.refreshToken);
     const { account, profile } = await this.usersService.getAccountWithProfile(payload.sub);
@@ -87,11 +107,23 @@ export class AuthService {
     return this.toAuthResponse(account, profile, tokens);
   }
 
+  /**
+   * Revokes all refresh tokens for an account.
+   *
+   * @param accountId - Account being logged out.
+   * @returns Status object confirming logout.
+   */
   async logout(accountId: string) {
     await this.usersService.replaceRefreshTokens(accountId, []);
     return { status: "ok" };
   }
 
+  /**
+   * Signs a new access and refresh token pair for an account.
+   *
+   * @param account - Account document to encode into token claims.
+   * @returns Signed access and refresh tokens.
+   */
   private async issueTokens(account: UserAccountDocument): Promise<TokenPair> {
     const payload = {
       email: account.email,
@@ -107,6 +139,12 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
+  /**
+   * Verifies a refresh token and normalizes token errors to UnauthorizedException.
+   *
+   * @param refreshToken - Raw refresh token from the client.
+   * @returns Verified token payload containing the account subject.
+   */
   private async verifyRefreshToken(refreshToken: string) {
     try {
       return await this.jwtService.verifyAsync<{ sub: string }>(refreshToken);
@@ -115,6 +153,13 @@ export class AuthService {
     }
   }
 
+  /**
+   * Finds the stored bcrypt hash that matches a presented refresh token.
+   *
+   * @param refreshTokenHashes - Stored refresh token hashes for the account.
+   * @param refreshToken - Raw refresh token presented by the client.
+   * @returns Matching hash, or null when the token was revoked or unknown.
+   */
   private async findMatchingRefreshTokenHash(refreshTokenHashes: string[], refreshToken: string) {
     for (const refreshTokenHash of refreshTokenHashes) {
       if (await bcrypt.compare(refreshToken, refreshTokenHash)) {
@@ -125,6 +170,14 @@ export class AuthService {
     return null;
   }
 
+  /**
+   * Converts persisted account and profile documents into the auth response shape.
+   *
+   * @param account - Authenticated account document.
+   * @param profile - Profile document attached to the account.
+   * @param tokens - Token pair issued for this response.
+   * @returns Serializable auth response consumed by the web app.
+   */
   private toAuthResponse(account: UserAccountDocument, profile: UserProfileDocument, tokens: TokenPair) {
     return {
       account: {

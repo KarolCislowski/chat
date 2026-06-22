@@ -2,10 +2,14 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { HydratedDocument, Schema as MongooseSchema, Types } from "mongoose";
 import { UserAccount } from "../../users/schemas/user-account.schema";
 
+/** Hydrated Mongo document for a guild. */
 export type GuildDocument = HydratedDocument<Guild>;
+
+/** Supported guild visual theme color families. */
 export type GuildThemeColor = "black" | "blue" | "green" | "pink" | "purple" | "red" | "white";
 
 @Schema({ timestamps: { createdAt: true, updatedAt: false } })
+/** Persistent guild aggregate with membership references and appearance settings. */
 export class Guild {
   @Prop({ maxlength: 80, required: true, trim: true })
   name!: string;
@@ -34,6 +38,7 @@ export class Guild {
   createdAt!: Date;
 }
 
+/** Mongoose schema for guild documents. */
 export const GuildSchema = SchemaFactory.createForClass(Guild);
 
 GuildSchema.index({ ownerId: 1, createdAt: -1 });

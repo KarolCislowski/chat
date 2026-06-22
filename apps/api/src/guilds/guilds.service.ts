@@ -13,6 +13,7 @@ const DEFAULT_GUILD_EMBLEM_URL = "/assets/imgs/flags/red/crest_001_16_29_41_r1_c
 const DEFAULT_GUILD_BACKGROUND_URL = "/assets/imgs/gbg/01_radiant_alpine_castle.png";
 
 @Injectable()
+/** Owns guild creation, membership rules, join requests, and appearance persistence. */
 export class GuildsService {
   constructor(
     @InjectModel(Guild.name) private readonly guildModel: Model<GuildDocument>,
@@ -21,6 +22,16 @@ export class GuildsService {
     @InjectModel(UserProfile.name) private readonly profileModel: Model<UserProfileDocument>,
   ) {}
 
+  /**
+   * Creates a guild owned by an account and assigns the owner membership.
+   *
+   * @param accountId - Account creating the guild.
+   * @param name - Raw guild name.
+   * @param themeColor - Selected guild theme color.
+   * @param emblemUrl - Selected guild emblem URL.
+   * @param backgroundUrl - Selected guild background URL.
+   * @returns Guild response for the new owner.
+   */
   async createGuild(
     accountId: string,
     name: string,
@@ -51,6 +62,16 @@ export class GuildsService {
     return this.toGuildResponse(guild, membership.role);
   }
 
+  /**
+   * Updates guild visual settings when the requester can manage the guild.
+   *
+   * @param accountId - Account requesting the update.
+   * @param guildId - Guild being updated.
+   * @param themeColor - Selected guild theme color.
+   * @param emblemUrl - Selected guild emblem URL.
+   * @param backgroundUrl - Selected guild background URL.
+   * @returns Detailed guild response with member profiles.
+   */
   async updateAppearance(accountId: string, guildId: string, themeColor: GuildThemeColor, emblemUrl: string, backgroundUrl: string) {
     const membership = await this.assertCanManageGuild(accountId, guildId);
     this.assertGuildAppearance(themeColor, emblemUrl, backgroundUrl);
@@ -65,6 +86,12 @@ export class GuildsService {
     return this.toGuildDetailsResponse(guild, membership.role, memberships);
   }
 
+  /**
+   * Lists guilds where an account has membership.
+   *
+   * @param accountId - Account whose guilds should be listed.
+   * @returns Guild responses ordered by membership join date.
+   */
   async getMyGuilds(accountId: string) {
     const memberships = await this.membershipModel.find({ userId: accountId }).sort({ joinedAt: -1 }).exec();
     const guildIds = memberships.map((membership) => membership.guildId);
@@ -79,6 +106,13 @@ export class GuildsService {
       .filter((guild) => guild !== null);
   }
 
+  /**
+   * Loads a guild details view for an existing member.
+   *
+   * @param accountId - Account requesting details.
+   * @param guildId - Guild to load.
+   * @returns Detailed guild response with member profiles.
+   */
   async getGuildDetails(accountId: string, guildId: string) {
     if (!Types.ObjectId.isValid(guildId)) {
       throw new NotFoundException("Guild was not found.");
@@ -101,11 +135,24 @@ export class GuildsService {
     return this.toGuildDetailsResponse(guild, requesterMembership.role, memberships);
   }
 
+  /**
+   * Returns guild IDs for websocket room membership and open-chat visibility.
+   *
+   * @param accountId - Account whose guild IDs should be loaded.
+   * @returns Guild ID strings.
+   */
   async getGuildIdsForUser(accountId: string) {
     const memberships = await this.membershipModel.find({ userId: accountId }).select("guildId").exec();
     return memberships.map((membership) => membership.guildId.toString());
   }
 
+  /**
+   * Ensures an account belongs to a guild.
+   *
+   * @param accountId - Account to validate.
+   * @param guildId - Guild to validate against.
+   * @returns A promise that resolves when membership exists.
+   */
   async assertGuildMembership(accountId: string, guildId: string) {
     if (!Types.ObjectId.isValid(guildId)) {
       throw new NotFoundException("Guild was not found.");
@@ -118,6 +165,12 @@ export class GuildsService {
     }
   }
 
+  /**
+   * Lists guilds the account can request to join.
+   *
+   * @param accountId - Account requesting available guilds.
+   * @returns Guild responses decorated with pending join request state.
+   */
   async getAvailableGuilds(accountId: string) {
     const [memberships, pendingRequests] = await Promise.all([
       this.membershipModel.find({ userId: accountId }).exec(),
@@ -133,6 +186,13 @@ export class GuildsService {
     }));
   }
 
+  /**
+   * Joins a guild using an invite code while enforcing membership limits.
+   *
+   * @param accountId - Account accepting the invite.
+   * @param inviteCode - Invite code generated for a guild.
+   * @returns Guild response for the new member.
+   */
   async joinGuild(accountId: string, inviteCode: string) {
     await this.assertMembershipLimit(accountId);
 
@@ -161,6 +221,13 @@ export class GuildsService {
     return this.toGuildResponse(guild, membership.role);
   }
 
+  /**
+   * Creates a new invite code for a guild managed by the requester.
+   *
+   * @param accountId - Account requesting the invite.
+   * @param guildId - Guild receiving a new invite code.
+   * @returns Guild response and the newly generated invite code.
+   */
   async createInvite(accountId: string, guildId: string) {
     if (!Types.ObjectId.isValid(guildId)) {
       throw new NotFoundException("Guild was not found.");
@@ -191,6 +258,14 @@ export class GuildsService {
     };
   }
 
+  /**
+   * Adds another user to a guild when the requester can manage members.
+   *
+   * @param accountId - Account sending the invite.
+   * @param guildId - Guild receiving the member.
+   * @param userId - Account ID of the invited user.
+   * @returns Updated guild response for the inviter.
+   */
   async inviteMember(accountId: string, guildId: string, userId: string) {
     const membership = await this.assertCanManageGuild(accountId, guildId);
 
@@ -234,6 +309,15 @@ export class GuildsService {
     return this.toGuildResponse(guild, membership.role);
   }
 
+  /**
+   * Changes a member role. Only owners can promote or demote non-owner members.
+   *
+   * @param accountId - Owner account requesting the change.
+   * @param guildId - Guild containing the member.
+   * @param userId - Member account whose role should change.
+   * @param role - New non-owner role.
+   * @returns Detailed guild response after the role update.
+   */
   async updateMemberRole(accountId: string, guildId: string, userId: string, role: Exclude<GuildRole, "owner">) {
     await this.assertGuildOwner(accountId, guildId);
 
@@ -261,6 +345,14 @@ export class GuildsService {
     return this.getGuildDetails(accountId, guildId);
   }
 
+  /**
+   * Removes a non-owner member from a guild.
+   *
+   * @param accountId - Owner account requesting removal.
+   * @param guildId - Guild containing the member.
+   * @param userId - Member account to remove.
+   * @returns Detailed guild response after removal.
+   */
   async removeMember(accountId: string, guildId: string, userId: string) {
     await this.assertGuildOwner(accountId, guildId);
 
@@ -288,6 +380,13 @@ export class GuildsService {
     return this.getGuildDetails(accountId, guildId);
   }
 
+  /**
+   * Creates a pending join request for a guild.
+   *
+   * @param accountId - Account requesting membership.
+   * @param guildId - Guild the account wants to join.
+   * @returns Join request response.
+   */
   async requestJoin(accountId: string, guildId: string) {
     await this.assertMembershipLimit(accountId);
 
@@ -321,6 +420,13 @@ export class GuildsService {
     return this.toJoinRequestResponse(request);
   }
 
+  /**
+   * Lists pending join requests for a guild managed by the requester.
+   *
+   * @param accountId - Account requesting the list.
+   * @param guildId - Guild whose requests should be listed.
+   * @returns Pending join requests with requester profile summaries.
+   */
   async getJoinRequests(accountId: string, guildId: string) {
     await this.assertCanManageGuild(accountId, guildId);
 
@@ -332,6 +438,14 @@ export class GuildsService {
     return requests.map((request) => this.toJoinRequestResponse(request, profilesByAccountId.get(request.userId.toString()) ?? null));
   }
 
+  /**
+   * Accepts a pending join request and creates membership if needed.
+   *
+   * @param accountId - Account accepting the request.
+   * @param guildId - Guild that owns the request.
+   * @param requestId - Join request to accept.
+   * @returns Updated join request response.
+   */
   async acceptJoinRequest(accountId: string, guildId: string, requestId: string) {
     await this.assertCanManageGuild(accountId, guildId);
 
@@ -366,6 +480,12 @@ export class GuildsService {
     return this.toJoinRequestResponse(request);
   }
 
+  /**
+   * Enforces the maximum number of guild memberships per account.
+   *
+   * @param accountId - Account to validate.
+   * @returns A promise that resolves when the account can join another guild.
+   */
   private async assertMembershipLimit(accountId: string) {
     const membershipCount = await this.membershipModel.countDocuments({ userId: accountId }).exec();
 
@@ -374,6 +494,13 @@ export class GuildsService {
     }
   }
 
+  /**
+   * Ensures an account is an owner or officer in a guild.
+   *
+   * @param accountId - Account to validate.
+   * @param guildId - Guild to validate against.
+   * @returns The requester's membership document.
+   */
   private async assertCanManageGuild(accountId: string, guildId: string) {
     if (!Types.ObjectId.isValid(guildId)) {
       throw new NotFoundException("Guild was not found.");
@@ -392,6 +519,13 @@ export class GuildsService {
     return membership;
   }
 
+  /**
+   * Ensures an account is the owner of a guild.
+   *
+   * @param accountId - Account to validate.
+   * @param guildId - Guild to validate against.
+   * @returns The owner membership document.
+   */
   private async assertGuildOwner(accountId: string, guildId: string) {
     if (!Types.ObjectId.isValid(guildId)) {
       throw new NotFoundException("Guild was not found.");
@@ -410,6 +544,12 @@ export class GuildsService {
     return membership;
   }
 
+  /**
+   * Creates a unique slug from a guild name by appending numeric suffixes.
+   *
+   * @param name - Raw guild name.
+   * @returns Unique slug for persistence.
+   */
   private async createUniqueSlug(name: string) {
     const baseSlug = this.slugify(name);
     let slug = baseSlug;
@@ -423,6 +563,12 @@ export class GuildsService {
     return slug;
   }
 
+  /**
+   * Converts a guild name into a URL-safe slug.
+   *
+   * @param name - Raw guild name.
+   * @returns Slug or generated fallback when the name has no slug-safe characters.
+   */
   private slugify(name: string) {
     const slug = name
       .trim()
@@ -433,10 +579,23 @@ export class GuildsService {
     return slug || `guild-${randomBytes(3).toString("hex")}`;
   }
 
+  /**
+   * Generates a random invite code.
+   *
+   * @returns Hex invite code.
+   */
   private createInviteCode() {
     return randomBytes(8).toString("hex");
   }
 
+  /**
+   * Validates that selected appearance assets belong to supported bundled sets.
+   *
+   * @param themeColor - Selected theme color.
+   * @param emblemUrl - Selected emblem URL.
+   * @param backgroundUrl - Selected background URL.
+   * @returns Nothing when the appearance selection is valid.
+   */
   private assertGuildAppearance(themeColor: GuildThemeColor, emblemUrl: string, backgroundUrl: string) {
     if (!emblemUrl.startsWith(`/assets/imgs/flags/${themeColor}/`)) {
       throw new BadRequestException("Guild emblem must belong to the selected theme color.");
@@ -447,6 +606,13 @@ export class GuildsService {
     }
   }
 
+  /**
+   * Converts a guild document into the list/detail response base shape.
+   *
+   * @param guild - Guild document from MongoDB.
+   * @param role - Current user's role in the guild, or null for available guilds.
+   * @returns Serializable guild response.
+   */
   private toGuildResponse(guild: GuildDocument, role: GuildMembershipDocument["role"] | null) {
     return {
       _id: guild.id,
@@ -465,6 +631,14 @@ export class GuildsService {
     };
   }
 
+  /**
+   * Converts guild and membership documents into a detailed response with profile data.
+   *
+   * @param guild - Guild document from MongoDB.
+   * @param role - Current user's role in the guild.
+   * @param memberships - Guild membership documents to expose in the details view.
+   * @returns Detailed guild response with member profiles.
+   */
   private async toGuildDetailsResponse(guild: GuildDocument, role: GuildMembershipDocument["role"], memberships: GuildMembershipDocument[]) {
     const accountIds = memberships.map((membership) => membership.userId);
     const profiles = await this.profileModel.find({ accountId: { $in: accountIds } }).exec();
@@ -493,6 +667,13 @@ export class GuildsService {
     };
   }
 
+  /**
+   * Converts a join request document into the API response shape.
+   *
+   * @param request - Join request document from MongoDB.
+   * @param profile - Optional profile summary for the requesting user.
+   * @returns Serializable join request response.
+   */
   private toJoinRequestResponse(request: GuildJoinRequestDocument, profile?: UserProfileDocument | null) {
     return {
       _id: request.id,

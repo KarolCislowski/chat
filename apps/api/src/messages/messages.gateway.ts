@@ -16,18 +16,21 @@ import { UsersService } from "../users/users.service";
 import { CreateGlobalMessageDto } from "./dto/create-global-message.dto";
 import { MessagesService } from "./messages.service";
 
+/** Authenticated user data stored on each accepted chat socket. */
 type ChatSocketUser = {
   accountId: string;
   email: string;
   role: UserRole;
 };
 
+/** Socket.IO client extended with the authenticated chat user payload. */
 type AuthenticatedSocket = Socket & {
   data: {
     user?: ChatSocketUser;
   };
 };
 
+/** JWT payload expected in websocket access tokens. */
 type AccessTokenPayload = {
   email: string;
   role: UserRole;
@@ -54,6 +57,12 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
     private readonly usersService: UsersService,
   ) {}
 
+  /**
+   * Authenticates a socket, joins user/guild rooms, and marks first connection online.
+   *
+   * @param client - Socket.IO client attempting to connect to the chat namespace.
+   * @returns A promise that resolves after connection setup or rejection.
+   */
   async handleConnection(client: AuthenticatedSocket) {
     try {
       const payload = await this.verifyClient(client);
@@ -73,6 +82,12 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
     }
   }
 
+  /**
+   * Unregisters socket presence and marks the account offline when its last socket closes.
+   *
+   * @param client - Socket.IO client disconnecting from the chat namespace.
+   * @returns A promise that resolves after presence state is updated.
+   */
   async handleDisconnect(client: AuthenticatedSocket) {
     const accountId = client.data.user?.accountId;
 
@@ -85,6 +100,13 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   @SubscribeMessage("message:create")
+  /**
+   * Handles realtime message creation and emits the result to the proper room set.
+   *
+   * @param client - Authenticated socket that sent the message event.
+   * @param dto - Validated message creation payload.
+   * @returns A promise that resolves after the message is persisted and emitted.
+   */
   async createMessage(@ConnectedSocket() client: AuthenticatedSocket, @MessageBody() dto: CreateGlobalMessageDto) {
     const user = client.data.user;
 
@@ -131,6 +153,12 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
     this.server.emit("message:created", message);
   }
 
+  /**
+   * Verifies the socket access token and returns its payload.
+   *
+   * @param client - Socket.IO client being authenticated.
+   * @returns Verified access token payload.
+   */
   private async verifyClient(client: AuthenticatedSocket) {
     const token = this.extractToken(client);
 
@@ -144,6 +172,12 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
     return payload;
   }
 
+  /**
+   * Extracts a bearer token from socket auth data or fallback headers.
+   *
+   * @param client - Socket.IO client handshake.
+   * @returns Access token string when present.
+   */
   private extractToken(client: Socket) {
     const authToken = client.handshake.auth?.token;
 
@@ -155,6 +189,13 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
     return type === "Bearer" ? token : undefined;
   }
 
+  /**
+   * Tracks an account socket and broadcasts online presence for the first active socket.
+   *
+   * @param client - Connected socket to track.
+   * @param accountId - Account represented by the socket.
+   * @returns A promise that resolves after any presence update is emitted.
+   */
   private async registerPresence(client: Socket, accountId: string) {
     const sockets = this.socketsByAccountId.get(accountId) ?? new Set<string>();
     const wasOffline = sockets.size === 0;
@@ -173,20 +214,46 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
     });
   }
 
+  /**
+   * Joins all guild rooms available to an account.
+   *
+   * @param client - Connected socket to join into rooms.
+   * @param accountId - Account whose guild memberships should be used.
+   * @returns A promise that resolves after all room joins finish.
+   */
   private async joinGuildRooms(client: Socket, accountId: string) {
     const guildIds = await this.guildsService.getGuildIdsForUser(accountId);
 
     await Promise.all(guildIds.map((guildId) => client.join(this.getGuildRoom(guildId))));
   }
 
+  /**
+   * Builds the Socket.IO room name for a guild channel.
+   *
+   * @param guildId - Guild ID.
+   * @returns Socket room name for the guild.
+   */
   private getGuildRoom(guildId: string) {
     return `guild:${guildId}`;
   }
 
+  /**
+   * Builds the Socket.IO room name for one account's personal events.
+   *
+   * @param accountId - Account ID.
+   * @returns Socket room name for the account.
+   */
   private getUserRoom(accountId: string) {
     return `user:${accountId}`;
   }
 
+  /**
+   * Removes a socket from presence tracking and broadcasts offline when no sockets remain.
+   *
+   * @param client - Disconnecting socket.
+   * @param accountId - Account represented by the socket.
+   * @returns A promise that resolves after any presence update is emitted.
+   */
   private async unregisterPresence(client: Socket, accountId: string) {
     const sockets = this.socketsByAccountId.get(accountId);
 
