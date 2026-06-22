@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback } from "react";
 import { Box, Button, Paper, Typography } from "@mui/material";
 import { hexToRgba } from "../domain/appearance";
 import { ChannelHero } from "../ui/channel-hero";
@@ -17,6 +18,22 @@ import { useChatPage } from "./use-chat-page";
  */
 export function ChatPage() {
   const chatPage = useChatPage();
+  const inviteSelectedPlayer = chatPage.handleInviteSelectedPlayer;
+  /**
+   * Bridges the async invite action into a void event handler for `ChatSidebar`.
+   *
+   * The callback is memoized so `ChatSidebar` can benefit from `React.memo`
+   * when only unrelated chat page state changes.
+   *
+   * @param guildId - Guild selected in the player action menu.
+   * @returns Nothing.
+   */
+  const handleInviteSelectedPlayer = useCallback(
+    (guildId: string) => {
+      void inviteSelectedPlayer(guildId);
+    },
+    [inviteSelectedPlayer],
+  );
 
   return (
     <Box
@@ -37,7 +54,7 @@ export function ChatPage() {
         isAuthenticated={chatPage.isAuthenticated}
         manageableGuilds={chatPage.manageableGuilds}
         onChannelChange={chatPage.setActiveChannel}
-        onInviteSelectedPlayer={(guildId) => void chatPage.handleInviteSelectedPlayer(guildId)}
+        onInviteSelectedPlayer={handleInviteSelectedPlayer}
         onPlayerMenuClose={chatPage.handlePlayerMenuClose}
         onPlayerMenuOpen={chatPage.handlePlayerMenuOpen}
         onStartWhisper={chatPage.startWhisper}

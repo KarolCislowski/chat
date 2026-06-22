@@ -1,4 +1,4 @@
-import { MouseEvent } from "react";
+import { memo, MouseEvent } from "react";
 import { Avatar, Box, Chip, IconButton, Paper, TextField, Typography } from "@mui/material";
 import { resolveAvatarPath } from "../../../lib/avatar-options";
 import { ChatUser } from "../../../stores/user-store";
@@ -23,7 +23,7 @@ type OnlinePlayersPanelProps = {
   t: Record<string, string>;
 };
 
-export function OnlinePlayersPanel({ apiStatus, isApiConnected, onPlayerMenuOpen, onlineUsers, t }: OnlinePlayersPanelProps) {
+function OnlinePlayersPanelComponent({ apiStatus, isApiConnected, onPlayerMenuOpen, onlineUsers, t }: OnlinePlayersPanelProps) {
   return (
     <Box
       component="aside"
@@ -162,3 +162,5 @@ export function OnlinePlayersPanel({ apiStatus, isApiConnected, onPlayerMenuOpen
     </Box>
   );
 }
+
+export const OnlinePlayersPanel = memo(OnlinePlayersPanelComponent);

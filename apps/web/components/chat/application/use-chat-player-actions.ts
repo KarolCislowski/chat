@@ -1,6 +1,6 @@
 "use client";
 
-import { MouseEvent, useState } from "react";
+import { MouseEvent, useCallback, useState } from "react";
 import type { ChatView } from "../../../stores/chat-store";
 import type { ChatUser } from "../../../stores/user-store";
 
@@ -22,42 +22,84 @@ export function useChatPlayerActions({ apiBaseUrl, getFreshAccessToken, inviteMe
   const [playerMenuAnchor, setPlayerMenuAnchor] = useState<HTMLElement | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<ChatUser | null>(null);
 
-  function handlePlayerMenuOpen(event: MouseEvent<HTMLButtonElement>, user: ChatUser) {
+  /**
+   * Opens the contextual action menu for a selected player.
+   *
+   * The callback is memoized so sidebar rows and the online player panel can
+   * keep stable props between unrelated chat updates.
+   *
+   * @param event - Button click event used as the MUI menu anchor.
+   * @param user - Player represented by the clicked action button.
+   * @returns Nothing.
+   */
+  const handlePlayerMenuOpen = useCallback(function handlePlayerMenuOpen(event: MouseEvent<HTMLButtonElement>, user: ChatUser) {
     event.stopPropagation();
     setSelectedPlayer(user);
     setPlayerMenuAnchor(event.currentTarget);
-  }
+  }, []);
 
-  function handlePlayerMenuClose() {
+  /**
+   * Closes the player action menu and clears the selected player.
+   *
+   * The callback is memoized because it is shared by the sidebar menu and
+   * whisper-start flow.
+   *
+   * @returns Nothing.
+   */
+  const handlePlayerMenuClose = useCallback(function handlePlayerMenuClose() {
     setPlayerMenuAnchor(null);
     setSelectedPlayer(null);
-  }
+  }, []);
 
-  function startWhisper(user: ChatUser) {
-    setActiveChannel({
-      recipientDisplayName: user.displayName,
-      recipientId: user.accountId,
-      type: "whisper",
-    });
-    handlePlayerMenuClose();
-  }
+  /**
+   * Switches the active chat view to a whisper conversation with a player.
+   *
+   * The callback is memoized so player rows can remain memoized while the
+   * surrounding chat page updates.
+   *
+   * @param user - Player who should become the whisper recipient.
+   * @returns Nothing.
+   */
+  const startWhisper = useCallback(
+    function startWhisper(user: ChatUser) {
+      setActiveChannel({
+        recipientDisplayName: user.displayName,
+        recipientId: user.accountId,
+        type: "whisper",
+      });
+      handlePlayerMenuClose();
+    },
+    [handlePlayerMenuClose, setActiveChannel],
+  );
 
-  async function inviteSelectedPlayer(guildId: string) {
-    if (!selectedPlayer) {
-      return;
-    }
+  /**
+   * Invites the currently selected player to a manageable guild.
+   *
+   * The callback is memoized for the player action menu and refreshes only
+   * when authentication, selected player, or invite dependencies change.
+   *
+   * @param guildId - Guild selected from the player action menu.
+   * @returns A promise that resolves after the invite attempt completes.
+   */
+  const inviteSelectedPlayer = useCallback(
+    async function inviteSelectedPlayer(guildId: string) {
+      if (!selectedPlayer) {
+        return;
+      }
 
-    const player = selectedPlayer;
-    handlePlayerMenuClose();
+      const player = selectedPlayer;
+      handlePlayerMenuClose();
 
-    const accessToken = await getFreshAccessToken(apiBaseUrl);
+      const accessToken = await getFreshAccessToken(apiBaseUrl);
 
-    if (!accessToken) {
-      return;
-    }
+      if (!accessToken) {
+        return;
+      }
 
-    await inviteMember(apiBaseUrl, accessToken, guildId, player.accountId);
-  }
+      await inviteMember(apiBaseUrl, accessToken, guildId, player.accountId);
+    },
+    [apiBaseUrl, getFreshAccessToken, handlePlayerMenuClose, inviteMember, selectedPlayer],
+  );
 
   return {
     handleInviteSelectedPlayer: inviteSelectedPlayer,

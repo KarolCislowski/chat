@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Box, ListItemButton, ListItemText } from "@mui/material";
 import { getGuildThemeAccent, resolveGuildEmblemUrl } from "../../../../lib/guild-flags";
 import { ChatView } from "../../../../stores/chat-store";
@@ -25,7 +26,7 @@ type GuildRailItemProps = {
   unreadByChannel: Record<string, number>;
 };
 
-export function GuildRailItem({ activeChannel, disabled, guild, onChannelChange, unreadByChannel }: GuildRailItemProps) {
+function GuildRailItemComponent({ activeChannel, disabled, guild, onChannelChange, unreadByChannel }: GuildRailItemProps) {
   const accent = getGuildThemeAccent(guild.themeColor);
   const channel: ChatView = { guildId: guild._id, type: "guild" };
   const isSelected = activeChannel.type === "guild" && activeChannel.guildId === guild._id;
@@ -79,3 +80,5 @@ export function GuildRailItem({ activeChannel, disabled, guild, onChannelChange,
     </ListItemButton>
   );
 }
+
+export const GuildRailItem = memo(GuildRailItemComponent);

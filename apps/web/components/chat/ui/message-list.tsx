@@ -1,7 +1,7 @@
 "use client";
 
 import { Alert, Box } from "@mui/material";
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 import type { ChannelAppearance } from "../domain/appearance";
 import type { UserAccount, UserProfile } from "../../../stores/auth-store";
 import type { ChatView, Message } from "../../../stores/chat-store";
@@ -33,7 +33,7 @@ type MessageListProps = {
   usersError: string | null;
 };
 
-export function MessageList({
+function MessageListComponent({
   account,
   activeChannel,
   appearance,
@@ -140,3 +140,5 @@ export function MessageList({
     </Box>
   );
 }
+
+export const MessageList = memo(MessageListComponent);

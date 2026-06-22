@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ReactNode } from "react";
+import { memo, ReactNode } from "react";
 import { Badge, Box, IconButton, ListItemButton, ListItemText, Typography } from "@mui/material";
 import { ChatView, getChatChannelKey } from "../../../../stores/chat-store";
 
@@ -126,7 +126,7 @@ type ChannelRailItemProps = {
   unreadByChannel: Record<string, number>;
 };
 
-export function ChannelRailItem({ accent, activeChannel, avatarPath, channel, disabled, label, onChannelChange, unreadByChannel }: ChannelRailItemProps) {
+function ChannelRailItemComponent({ accent, activeChannel, avatarPath, channel, disabled, label, onChannelChange, unreadByChannel }: ChannelRailItemProps) {
   const isSelected = !disabled && activeChannel.type === channel.type;
 
   return (
@@ -157,3 +157,5 @@ export function ChannelRailItem({ accent, activeChannel, avatarPath, channel, di
     </ListItemButton>
   );
 }
+
+export const ChannelRailItem = memo(ChannelRailItemComponent);

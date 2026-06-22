@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Avatar, Box, Chip, Paper, Typography } from "@mui/material";
 import { resolveAvatarPath } from "../../../lib/avatar-options";
 import type { ChannelAppearance } from "../domain/appearance";
@@ -31,7 +32,7 @@ type MessageItemProps = {
   t: Record<string, string>;
 };
 
-export function MessageItem({ account, activeChannel, appearance, getMessageChannelLabel, language, message, profile, t }: MessageItemProps) {
+function MessageItemComponent({ account, activeChannel, appearance, getMessageChannelLabel, language, message, profile, t }: MessageItemProps) {
   const isOwnMessage = message.senderId === account?.id;
   const author = isOwnMessage ? profile?.displayName ?? t.profile : message.sender?.displayName ?? message.senderId;
   const authorStatus = message.sender?.onlineStatus ?? (isOwnMessage ? profile?.onlineStatus : undefined);
@@ -142,3 +143,5 @@ export function MessageItem({ account, activeChannel, appearance, getMessageChan
     </Box>
   );
 }
+
+export const MessageItem = memo(MessageItemComponent);

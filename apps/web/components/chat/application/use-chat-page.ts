@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo } from "react";
+import { FormEvent, useCallback, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { SelectChangeEvent } from "@mui/material";
 import { getChannelAppearance, getComposeAppearance } from "../domain/appearance";
@@ -122,24 +122,62 @@ export function useChatPage() {
   const manageableGuilds = useMemo(() => getManageableGuilds(guilds), [guilds]);
   const onlineUsers = useMemo(() => getOnlineUsers(users), [users]);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  /**
+   * Submits the current chat draft to the selected compose channel.
+   *
+   * The callback is memoized so `MessageComposer` can skip renders when only
+   * unrelated chat page state changes.
+   *
+   * @param event - Composer form submit event.
+   * @returns Nothing.
+   */
+  const handleSubmit = useCallback(
+    function handleSubmit(event: FormEvent<HTMLFormElement>) {
+      event.preventDefault();
 
-    const text = draft.trim();
-    if (!text) {
-      return;
-    }
+      const text = draft.trim();
+      if (!text) {
+        return;
+      }
 
-    sendMessage(text);
-  }
+      sendMessage(text);
+    },
+    [draft, sendMessage],
+  );
 
-  function handleComposeChannelChange(event: SelectChangeEvent<string>) {
-    const channel = getComposeChannelFromKey(event.target.value, guilds, users);
+  /**
+   * Converts the compose destination select value into a concrete chat channel.
+   *
+   * The callback is memoized because it is passed directly into the composer
+   * and depends only on the current guild/user collections.
+   *
+   * @param event - MUI select change event containing the selected channel key.
+   * @returns Nothing.
+   */
+  const handleComposeChannelChange = useCallback(
+    function handleComposeChannelChange(event: SelectChangeEvent<string>) {
+      const channel = getComposeChannelFromKey(event.target.value, guilds, users);
 
-    if (channel) {
-      setComposeChannel(channel);
-    }
-  }
+      if (channel) {
+        setComposeChannel(channel);
+      }
+    },
+    [guilds, setComposeChannel, users],
+  );
+
+  /**
+   * Formats channel badges for messages shown in the aggregate open chat view.
+   *
+   * The callback is memoized so each `MessageItem` receives a stable formatter
+   * while guild names and translations remain unchanged.
+   *
+   * @param message - Message whose source channel should be labeled.
+   * @returns Localized channel label for the message.
+   */
+  const formatMessageChannelLabel = useCallback(
+    (message: Message) => getMessageChannelLabel(message, guilds, t),
+    [guilds, t],
+  );
 
   return {
     account,
@@ -154,7 +192,7 @@ export function useChatPage() {
     connectionError,
     connectionStatus,
     draft,
-    getMessageChannelLabel: (message: Message) => getMessageChannelLabel(message, guilds, t),
+    getMessageChannelLabel: formatMessageChannelLabel,
     guildError,
     guilds,
     handleComposeChannelChange,

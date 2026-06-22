@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MouseEvent } from "react";
+import { memo, MouseEvent } from "react";
 import { Box, Button, List, Typography } from "@mui/material";
 import { ChatView } from "../../../stores/chat-store";
 import type { Guild } from "../../../stores/guild-store";
@@ -45,7 +45,7 @@ type ChatSidebarProps = {
   users: ChatUser[];
 };
 
-export function ChatSidebar({
+function ChatSidebarComponent({
   activeChannel,
   guilds,
   isAuthenticated,
@@ -171,3 +171,5 @@ export function ChatSidebar({
     </Box>
   );
 }
+
+export const ChatSidebar = memo(ChatSidebarComponent);

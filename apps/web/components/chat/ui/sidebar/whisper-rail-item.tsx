@@ -1,6 +1,6 @@
 "use client";
 
-import { MouseEvent } from "react";
+import { memo, MouseEvent } from "react";
 import { Avatar, Box, IconButton, ListItemButton, ListItemText } from "@mui/material";
 import { resolveAvatarPath } from "../../../../lib/avatar-options";
 import { ChatView } from "../../../../stores/chat-store";
@@ -34,7 +34,7 @@ type WhisperRailItemProps = {
   user: ChatUser;
 };
 
-export function WhisperRailItem({ activeChannel, disabled, onPlayerMenuOpen, onStartWhisper, unreadByChannel, user }: WhisperRailItemProps) {
+function WhisperRailItemComponent({ activeChannel, disabled, onPlayerMenuOpen, onStartWhisper, unreadByChannel, user }: WhisperRailItemProps) {
   const channel: ChatView = {
     recipientDisplayName: user.displayName,
     recipientId: user.accountId,
@@ -103,3 +103,5 @@ export function WhisperRailItem({ activeChannel, disabled, onPlayerMenuOpen, onS
     </Box>
   );
 }
+
+export const WhisperRailItem = memo(WhisperRailItemComponent);

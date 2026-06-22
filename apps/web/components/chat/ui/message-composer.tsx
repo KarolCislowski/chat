@@ -1,4 +1,4 @@
-import { FormEvent } from "react";
+import { FormEvent, memo } from "react";
 import { Box, Button, Divider, FormControl, InputLabel, MenuItem, Select, SelectChangeEvent, TextField } from "@mui/material";
 import { ComposeAppearance } from "../domain/appearance";
 import { ChatChannel, getChatChannelKey } from "../../../stores/chat-store";
@@ -46,7 +46,7 @@ type MessageComposerProps = {
   users: ChatUser[];
 };
 
-export function MessageComposer({
+function MessageComposerComponent({
   activeChannelType,
   appearance,
   composeChannel,
@@ -166,3 +166,5 @@ export function MessageComposer({
     </Box>
   );
 }
+
+export const MessageComposer = memo(MessageComposerComponent);
