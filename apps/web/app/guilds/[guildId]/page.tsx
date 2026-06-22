@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { GuildDetailsPage } from "../../../components/guild/guild-details-page";
+import { GuildDetailsPage } from "../../../components/guild/application/guild-details-page";
 
 export default function Page() {
   const params = useParams<{ guildId: string }>();

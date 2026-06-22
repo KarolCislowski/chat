@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 import "./globals.css";
-import { AppShell } from "../components/layout/app-shell";
+import { AppShell } from "../components/shared/ui/app-shell";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
