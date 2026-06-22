@@ -35,10 +35,11 @@ export function GuildAppearancePicker({
 
   return (
     <Box sx={{ display: "grid", gap: 1.25 }}>
-      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
+      <Box aria-label="Guild color" role="group" sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
         {guildFlagSets.map((set) => (
           <Button
-            aria-label={set.label}
+            aria-label={`Select ${set.label} guild color`}
+            aria-pressed={themeColor === set.label}
             disabled={disabled}
             key={set.label}
             onClick={() => onChange(set.label, set.paths[0])}
@@ -62,6 +63,8 @@ export function GuildAppearancePicker({
       </Box>
 
       <Box
+        aria-label={`${themeColor} guild emblems`}
+        role="group"
         sx={{
           bgcolor: "rgba(2, 8, 18, 0.3)",
           border: "1px solid rgba(96, 165, 250, 0.14)",
@@ -74,8 +77,9 @@ export function GuildAppearancePicker({
           p: 1,
         }}
       >
-        {flagSet.paths.map((flagPath) => {
+        {flagSet.paths.map((flagPath, index) => {
           const isSelected = flagPath === emblemUrl;
+          const emblemLabel = `Select ${flagSet.label} guild emblem ${index + 1}`;
 
           return (
             <Tooltip
@@ -90,7 +94,8 @@ export function GuildAppearancePicker({
             >
               <Box component="span" sx={{ display: "block" }}>
                 <Button
-                  aria-label={flagPath}
+                  aria-label={emblemLabel}
+                  aria-pressed={isSelected}
                   disabled={disabled}
                   onClick={() => onChange(flagSet.label, flagPath)}
                   sx={{

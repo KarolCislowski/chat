@@ -43,10 +43,33 @@ export function WhisperRailItem({ activeChannel, disabled, onPlayerMenuOpen, onS
   const isSelected = activeChannel.type === "whisper" && activeChannel.recipientId === user.accountId;
 
   return (
-    <ListItemButton disabled={disabled} key={user.accountId} onClick={() => onStartWhisper(user)} selected={isSelected} sx={railItemSx(isSelected, "#7dd3fc")}>
-      <ListItemText
-        primary={
-          <Box component="span" sx={{ alignItems: "center", display: "flex", gap: 1, justifyContent: "space-between", minWidth: 0 }}>
+    <Box
+      component="li"
+      key={user.accountId}
+      sx={{
+        ...railItemSx(isSelected, "#7dd3fc"),
+        alignItems: "center",
+        display: "grid",
+        gridTemplateColumns: "minmax(0, 1fr) 32px",
+        listStyle: "none",
+        "&.Mui-selected": undefined,
+        ...(isSelected
+          ? {
+              background: "linear-gradient(90deg, rgba(37, 99, 235, 0.22), rgba(37, 99, 235, 0.04))",
+              borderColor: "rgba(96, 165, 250, 0.22)",
+              borderLeftColor: "#7dd3fc",
+            }
+          : {}),
+      }}
+    >
+      <ListItemButton
+        aria-current={isSelected ? "page" : undefined}
+        disabled={disabled}
+        onClick={() => onStartWhisper(user)}
+        sx={{ color: "inherit", minWidth: 0, p: 0, "&:hover": { bgcolor: "transparent" } }}
+      >
+        <ListItemText
+          primary={
             <Box component="span" sx={{ alignItems: "center", display: "flex", gap: 1.4, minWidth: 0 }}>
               <Avatar
                 src={resolveAvatarPath(user.avatarUrl)}
@@ -60,22 +83,23 @@ export function WhisperRailItem({ activeChannel, disabled, onPlayerMenuOpen, onS
               />
               <ChannelPrimary channel={channel} label={user.displayName} unreadByChannel={unreadByChannel} />
             </Box>
-            <IconButton
-              aria-label={`${user.displayName} menu`}
-              color="inherit"
-              onClick={(event) => onPlayerMenuOpen(event, user)}
-              size="small"
-              sx={{ color: "#f8fafc", flex: "0 0 auto", height: 28, width: 28 }}
-              type="button"
-            >
-              <Box component="span" sx={{ fontSize: "1rem", lineHeight: 1 }}>
-                ...
-              </Box>
-            </IconButton>
-          </Box>
-        }
-        slotProps={{ primary: { sx: { fontWeight: 700 } } }}
-      />
-    </ListItemButton>
+          }
+          slotProps={{ primary: { sx: { fontWeight: 700 } } }}
+        />
+      </ListItemButton>
+      <IconButton
+        aria-label={`Open actions menu for ${user.displayName}`}
+        color="inherit"
+        disabled={disabled}
+        onClick={(event) => onPlayerMenuOpen(event, user)}
+        size="small"
+        sx={{ color: "#f8fafc", height: 28, justifySelf: "end", width: 28 }}
+        type="button"
+      >
+        <Box aria-hidden component="span" sx={{ fontSize: "1rem", lineHeight: 1 }}>
+          ...
+        </Box>
+      </IconButton>
+    </Box>
   );
 }

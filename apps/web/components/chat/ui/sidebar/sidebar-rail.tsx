@@ -41,11 +41,12 @@ export function railItemSx(isSelected: boolean, accent = "#60a5fa") {
 /** Props for a labeled sidebar section header with an optional action link. */
 type SectionHeadingProps = {
   actionHref?: string;
+  actionLabel?: string;
   children: ReactNode;
   hasTopMargin?: boolean;
 };
 
-export function SidebarSectionHeading({ actionHref, children, hasTopMargin = false }: SectionHeadingProps) {
+export function SidebarSectionHeading({ actionHref, actionLabel, children, hasTopMargin = false }: SectionHeadingProps) {
   return (
     <Box
       sx={{
@@ -70,7 +71,13 @@ export function SidebarSectionHeading({ actionHref, children, hasTopMargin = fal
         {children}
       </Typography>
       {actionHref ? (
-        <IconButton component={Link} href={actionHref} size="small" sx={{ bgcolor: "rgba(96, 165, 250, 0.1)", color: "#bfdbfe", height: 28, width: 28 }}>
+        <IconButton
+          aria-label={actionLabel ?? "Open section action"}
+          component={Link}
+          href={actionHref}
+          size="small"
+          sx={{ bgcolor: "rgba(96, 165, 250, 0.1)", color: "#bfdbfe", height: 28, width: 28 }}
+        >
           +
         </IconButton>
       ) : null}

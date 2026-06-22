@@ -86,8 +86,11 @@ export function MessageList({
   return (
     <Box
       aria-live="polite"
+      aria-atomic="false"
+      aria-relevant="additions text"
       onScroll={handleScroll}
       ref={listRef}
+      role="log"
       sx={{
         display: "flex",
         flexDirection: "column",

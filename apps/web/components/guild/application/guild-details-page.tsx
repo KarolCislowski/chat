@@ -298,6 +298,9 @@ export function GuildDetailsPage({ guildId }: GuildDetailsPageProps) {
                         <Box sx={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: 1, justifyContent: { md: "flex-end" } }}>
                           <Select
                             disabled={isLoading}
+                            inputProps={{
+                              "aria-label": `Role for ${member.user?.displayName ?? member.userId}`,
+                            }}
                             onChange={(event) => updateMemberRole(member.userId, event.target.value as Exclude<GuildRole, "owner">)}
                             size="small"
                             sx={{

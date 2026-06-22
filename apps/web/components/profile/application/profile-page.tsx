@@ -437,8 +437,9 @@ export function ProfilePage() {
               p: 1.25,
             }}
           >
-            {avatarOptions.map((avatarPath) => {
+            {avatarOptions.map((avatarPath, index) => {
               const isSelected = avatarPath === pendingAvatar;
+              const avatarLabel = `Select avatar ${index + 1}`;
 
               return (
                 <Tooltip
@@ -470,7 +471,8 @@ export function ProfilePage() {
                 >
                   <span>
                     <Button
-                      aria-label={avatarPath}
+                      aria-label={avatarLabel}
+                      aria-pressed={isSelected}
                       disabled={isFormDisabled}
                       onClick={() => {
                         setSaved(false);

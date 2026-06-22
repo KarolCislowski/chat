@@ -104,7 +104,7 @@ export function ChatSidebar({
           unreadByChannel={unreadByChannel}
         />
 
-        <SidebarSectionHeading actionHref="/guilds" hasTopMargin>
+        <SidebarSectionHeading actionHref="/guilds" actionLabel={t.createGuild} hasTopMargin>
           {t.guilds}
         </SidebarSectionHeading>
 

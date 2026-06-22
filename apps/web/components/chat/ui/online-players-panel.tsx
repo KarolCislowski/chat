@@ -117,14 +117,16 @@ export function OnlinePlayersPanel({ apiStatus, isApiConnected, onPlayerMenuOpen
                   </Typography>
                 </Box>
                 <IconButton
-                  aria-label={`${user.displayName} menu`}
+                  aria-label={`Open actions menu for ${user.displayName}`}
                   color="inherit"
                   onClick={(event) => onPlayerMenuOpen(event, user)}
                   size="small"
                   sx={{ color: "#f0b35f" }}
                   type="button"
                 >
-                  ...
+                  <Box aria-hidden component="span">
+                    ...
+                  </Box>
                 </IconButton>
               </Box>
             ))

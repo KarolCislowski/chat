@@ -3,6 +3,11 @@
 import { Box, Button, Tooltip } from "@mui/material";
 import { guildBackgroundOptions, resolveGuildBackgroundUrl } from "../../../lib/guild-flags";
 
+function getBackgroundLabel(backgroundUrl: string) {
+  const filename = backgroundUrl.split("/").pop()?.replace(/^\d+_/, "").replace(/\.png$/, "") ?? "background";
+  return filename.replace(/_/g, " ");
+}
+
 /** Props for the selectable guild hero background grid. */
 type GuildBackgroundPickerProps = {
   /** Currently selected or persisted background URL. */
@@ -30,6 +35,8 @@ export function GuildBackgroundPicker({
 
   return (
     <Box
+      aria-label="Guild backgrounds"
+      role="group"
       sx={{
         bgcolor: "rgba(2, 8, 18, 0.3)",
         border: "1px solid rgba(96, 165, 250, 0.14)",
@@ -42,6 +49,7 @@ export function GuildBackgroundPicker({
     >
       {guildBackgroundOptions.map((option) => {
         const isSelected = option === resolvedBackgroundUrl;
+        const backgroundLabel = getBackgroundLabel(option);
 
         return (
           <Tooltip
@@ -56,7 +64,8 @@ export function GuildBackgroundPicker({
           >
             <Box component="span" sx={{ display: "block" }}>
               <Button
-                aria-label={option}
+                aria-label={`Select ${backgroundLabel} guild background`}
+                aria-pressed={isSelected}
                 disabled={disabled}
                 onClick={() => onChange(option)}
                 sx={{

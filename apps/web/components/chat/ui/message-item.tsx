@@ -103,6 +103,7 @@ export function MessageItem({ account, activeChannel, appearance, getMessageChan
               />
             ) : null}
             <Box
+              aria-hidden="true"
               component="span"
               sx={{
                 bgcolor: authorStatus === "online" ? "primary.main" : "text.disabled",
@@ -112,6 +113,22 @@ export function MessageItem({ account, activeChannel, appearance, getMessageChan
                 width: 8,
               }}
             />
+            <Box
+              component="span"
+              sx={{
+                border: 0,
+                clip: "rect(0 0 0 0)",
+                height: 1,
+                m: -1,
+                overflow: "hidden",
+                p: 0,
+                position: "absolute",
+                whiteSpace: "nowrap",
+                width: 1,
+              }}
+            >
+              {authorStatus ? `Status: ${t[authorStatus] ?? authorStatus}.` : ""}
+            </Box>
             <Typography component="span" sx={{ fontSize: "inherit", overflowWrap: "anywhere" }}>
               {author}
             </Typography>
