@@ -91,7 +91,6 @@ export function ChannelHeroAvatar({ appearance, presentation }: ChannelHeroAvata
       src={presentation.avatarUrl}
       sx={{
         alignSelf: "center",
-        border: presentation.isGuild ? "none" : `1px solid ${appearance.messageBorder}`,
         borderRadius: presentation.isGuild ? 0 : "50%",
         filter: presentation.isGuild ? "drop-shadow(0 16px 24px rgba(0, 0, 0, 0.54))" : "drop-shadow(0 14px 20px rgba(0, 0, 0, 0.48))",
         height: presentation.isGuild ? "100%" : { xs: 70, md: 92 },
