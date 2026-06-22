@@ -26,7 +26,9 @@ export function ChatPage() {
         display: "grid",
         gridTemplateColumns: { xs: "1fr", lg: "320px minmax(0, 1fr) 320px" },
         height: "100%",
+        minWidth: 0,
         overflow: "hidden",
+        width: "100%",
       }}
     >
       <ChatSidebar

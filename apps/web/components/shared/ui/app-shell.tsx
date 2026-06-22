@@ -135,7 +135,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         display: "grid",
         gridTemplateRows: { xs: "auto minmax(0, 1fr)", lg: "92px minmax(0, 1fr)" },
         height: "100vh",
+        minWidth: 0,
         overflow: "hidden",
+        width: "100%",
       }}
     >
       <Box
@@ -322,7 +324,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Box>
       </Box>
 
-      <Box sx={{ minHeight: 0, overflow: "auto" }}>{children}</Box>
+      <Box sx={{ minHeight: 0, minWidth: 0, overflow: pathname === "/" ? "hidden" : "auto" }}>{children}</Box>
     </Box>
   );
 }
