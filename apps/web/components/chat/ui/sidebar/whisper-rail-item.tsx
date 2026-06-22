@@ -7,12 +7,30 @@ import { ChatView } from "../../../../stores/chat-store";
 import type { ChatUser } from "../../../../stores/user-store";
 import { ChannelPrimary, railItemSx } from "./sidebar-rail";
 
+/** Props for one whisper conversation entry in the sidebar rail. */
 type WhisperRailItemProps = {
+  /** Channel currently displayed in the main chat panel. */
   activeChannel: ChatView;
+  /** Whether this item should be disabled for unauthenticated users. */
   disabled: boolean;
+  /**
+   * Opens the contextual player action menu.
+   *
+   * @param event - Button click event used as the menu anchor.
+   * @param user - Player represented by this whisper item.
+   * @returns Nothing.
+   */
   onPlayerMenuOpen: (event: MouseEvent<HTMLButtonElement>, user: ChatUser) => void;
+  /**
+   * Opens or focuses the whisper channel for this player.
+   *
+   * @param user - Player represented by this whisper item.
+   * @returns Nothing.
+   */
   onStartWhisper: (user: ChatUser) => void;
+  /** Unread counters keyed by chat channel. */
   unreadByChannel: Record<string, number>;
+  /** Player represented by this rail item. */
   user: ChatUser;
 };
 

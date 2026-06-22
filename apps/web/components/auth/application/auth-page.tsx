@@ -40,6 +40,11 @@ const fieldSx = {
   },
 };
 
+/**
+ * Renders the login and registration screen.
+ *
+ * @returns Auth form that redirects authenticated users back to the chat.
+ */
 export function AuthPage() {
   const router = useRouter();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";

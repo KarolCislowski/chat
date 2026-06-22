@@ -4,13 +4,31 @@ import { Menu, MenuItem } from "@mui/material";
 import type { Guild } from "../../../../stores/guild-store";
 import type { ChatUser } from "../../../../stores/user-store";
 
+/** Props for the contextual menu opened from player rows. */
 type PlayerActionMenuProps = {
+  /** Element used by MUI to position the menu. */
   anchorEl: HTMLElement | null;
+  /** Guilds where the current user can invite the selected player. */
   manageableGuilds: Guild[];
+  /** Closes the player menu. */
   onClose: () => void;
+  /**
+   * Invites the selected player to a guild.
+   *
+   * @param guildId - Guild selected from the menu.
+   * @returns Nothing.
+   */
   onInviteSelectedPlayer: (guildId: string) => void;
+  /**
+   * Starts a whisper chat with the selected player.
+   *
+   * @param user - Player selected from the menu.
+   * @returns Nothing.
+   */
   onStartWhisper: (user: ChatUser) => void;
+  /** Player currently targeted by the menu. */
   selectedPlayer: ChatUser | null;
+  /** Translation dictionary used for menu labels. */
   t: Record<string, string>;
 };
 

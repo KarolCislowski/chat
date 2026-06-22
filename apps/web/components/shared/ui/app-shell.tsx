@@ -18,6 +18,13 @@ const languageFlags: Record<UiLanguage, string> = {
   sv: "🇸🇪",
 };
 
+/**
+ * Renders the authenticated portal frame and owns cross-page realtime setup.
+ *
+ * @param props - Shell props.
+ * @param props.children - Active Next.js route content.
+ * @returns Portal layout with header navigation, account menu, and page content.
+ */
 export function AppShell({ children }: { children: ReactNode }) {
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";
   const pathname = usePathname();

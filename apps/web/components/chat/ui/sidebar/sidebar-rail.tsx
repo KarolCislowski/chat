@@ -5,6 +5,13 @@ import { ReactNode } from "react";
 import { Badge, Box, IconButton, ListItemButton, ListItemText, Typography } from "@mui/material";
 import { ChatView, getChatChannelKey } from "../../../../stores/chat-store";
 
+/**
+ * Builds shared styles for selectable sidebar rail items.
+ *
+ * @param isSelected - Whether the rail item represents the active channel.
+ * @param accent - Accent color used for selection borders and highlights.
+ * @returns MUI sx object for a rail item.
+ */
 export function railItemSx(isSelected: boolean, accent = "#60a5fa") {
   return {
     border: "1px solid transparent",
@@ -31,6 +38,7 @@ export function railItemSx(isSelected: boolean, accent = "#60a5fa") {
   };
 }
 
+/** Props for a labeled sidebar section header with an optional action link. */
 type SectionHeadingProps = {
   actionHref?: string;
   children: ReactNode;
@@ -77,6 +85,12 @@ type ChannelPrimaryProps = {
   unreadByChannel: Record<string, number>;
 };
 
+/**
+ * Renders a channel label with unread count and optional right-side adornment.
+ *
+ * @param props - Channel label, unread counters, and optional adornment.
+ * @returns Sidebar primary label content.
+ */
 export function ChannelPrimary({ channel, endAdornment, label, unreadByChannel }: ChannelPrimaryProps) {
   const unreadCount = unreadByChannel[getChatChannelKey(channel)] ?? 0;
 
@@ -93,6 +107,7 @@ export function ChannelPrimary({ channel, endAdornment, label, unreadByChannel }
   );
 }
 
+/** Props for global/open channel rail items. */
 type ChannelRailItemProps = {
   accent: string;
   activeChannel: ChatView;

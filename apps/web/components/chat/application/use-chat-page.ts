@@ -24,6 +24,11 @@ import { useLanguageStore } from "../../../stores/language-store";
 import { useUserStore } from "../../../stores/user-store";
 import { useChatPlayerActions } from "./use-chat-player-actions";
 
+/**
+ * Composes all state, derived values, and handlers needed by the chat page.
+ *
+ * @returns View model consumed by the chat page presentation component.
+ */
 export function useChatPage() {
   const router = useRouter();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";

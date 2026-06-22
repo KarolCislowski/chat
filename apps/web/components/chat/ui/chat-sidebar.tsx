@@ -11,12 +11,29 @@ import { PlayerActionMenu } from "./sidebar/player-action-menu";
 import { ChannelRailItem, SidebarSectionHeading } from "./sidebar/sidebar-rail";
 import { WhisperRailItem } from "./sidebar/whisper-rail-item";
 
+/** Props for the channel, guild, and whisper navigation rail. */
 type ChatSidebarProps = {
+  /** Channel currently displayed in the main chat panel. */
   activeChannel: ChatView;
+  /** Guilds available as chat channels. */
   guilds: Guild[];
+  /** Whether navigation actions should be enabled for the current viewer. */
   isAuthenticated: boolean;
+  /** Guilds where the current user can invite other players. */
   manageableGuilds: Guild[];
+  /**
+   * Switches the active chat view.
+   *
+   * @param channel - Channel selected in the sidebar.
+   * @returns Nothing.
+   */
   onChannelChange: (channel: ChatView) => void;
+  /**
+   * Invites the selected player to a guild.
+   *
+   * @param guildId - Guild selected in the player action menu.
+   * @returns Nothing.
+   */
   onInviteSelectedPlayer: (guildId: string) => void;
   onPlayerMenuClose: () => void;
   onPlayerMenuOpen: (event: MouseEvent<HTMLButtonElement>, user: ChatUser) => void;

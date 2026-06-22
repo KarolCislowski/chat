@@ -1,6 +1,13 @@
 import { Box } from "@mui/material";
 import { ReactNode } from "react";
 
+/**
+ * Provides the standard full-page spacing for non-chat feature pages.
+ *
+ * @param props - Frame props.
+ * @param props.children - Feature page content.
+ * @returns Main page wrapper with portal spacing and text color.
+ */
 export function PageFrame({ children }: { children: ReactNode }) {
   return (
     <Box

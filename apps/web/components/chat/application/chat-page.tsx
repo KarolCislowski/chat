@@ -10,6 +10,11 @@ import { MessageList } from "../ui/message-list";
 import { OnlinePlayersPanel } from "../ui/online-players-panel";
 import { useChatPage } from "./use-chat-page";
 
+/**
+ * Renders the full social chat experience from the chat page view model.
+ *
+ * @returns Chat layout with sidebar navigation, channel hero, timeline, composer, and online users.
+ */
 export function ChatPage() {
   const chatPage = useChatPage();
 

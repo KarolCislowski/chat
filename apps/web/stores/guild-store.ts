@@ -1,9 +1,13 @@
 import { create } from "zustand";
 import { defaultGuildBackgroundUrl, defaultGuildEmblemUrl, defaultGuildThemeColor, GuildThemeColor } from "../lib/guild-flags";
 
+/** Role assigned to a user inside a guild membership. */
 export type GuildRole = "owner" | "officer" | "member";
+
+/** Lifecycle state of a request to join a guild. */
 export type JoinRequestStatus = "pending" | "accepted" | "rejected";
 
+/** Guild summary returned by guild list and details endpoints. */
 export type Guild = {
   _id: string;
   name: string;
@@ -21,6 +25,7 @@ export type Guild = {
   joinRequestStatus?: JoinRequestStatus | null;
 };
 
+/** Pending or historical membership request for a guild. */
 export type GuildJoinRequest = {
   _id: string;
   guildId: string;
@@ -46,18 +51,90 @@ type GuildState = {
   emblemUrl: string;
   name: string;
   themeColor: GuildThemeColor;
+  /**
+   * Approves a pending guild join request.
+   *
+   * @param apiBaseUrl - Base URL of the API server.
+   * @param accessToken - JWT access token of a user allowed to manage requests.
+   * @param guildId - Guild that owns the request.
+   * @param requestId - Join request to accept.
+   * @returns A promise that resolves after request state is updated.
+   */
   acceptJoinRequest: (apiBaseUrl: string, accessToken: string, guildId: string, requestId: string) => Promise<void>;
+  /**
+   * Creates a guild using the draft name and appearance stored in this store.
+   *
+   * @param apiBaseUrl - Base URL of the API server.
+   * @param accessToken - JWT access token of the creating user.
+   * @returns A promise that resolves after the guild list is updated.
+   */
   createGuild: (apiBaseUrl: string, accessToken: string) => Promise<void>;
+  /**
+   * Adds a user directly to a guild, used by owner/officer invite actions.
+   *
+   * @param apiBaseUrl - Base URL of the API server.
+   * @param accessToken - JWT access token of a user allowed to invite members.
+   * @param guildId - Guild receiving the member.
+   * @param userId - Account ID of the invited user.
+   * @returns A promise that resolves after guild state is updated.
+   */
   inviteMember: (apiBaseUrl: string, accessToken: string, guildId: string, userId: string) => Promise<void>;
+  /**
+   * Loads guilds that the current user can request to join.
+   *
+   * @param apiBaseUrl - Base URL of the API server.
+   * @param accessToken - JWT access token of the current user.
+   * @returns A promise that resolves after available guilds are stored.
+   */
   loadAvailableGuilds: (apiBaseUrl: string, accessToken: string) => Promise<void>;
+  /**
+   * Loads guilds where the current user is already a member.
+   *
+   * @param apiBaseUrl - Base URL of the API server.
+   * @param accessToken - JWT access token of the current user.
+   * @returns A promise that resolves after member guilds are stored.
+   */
   loadGuilds: (apiBaseUrl: string, accessToken: string) => Promise<void>;
+  /**
+   * Loads pending join requests for a manageable guild.
+   *
+   * @param apiBaseUrl - Base URL of the API server.
+   * @param accessToken - JWT access token of a user allowed to view requests.
+   * @param guildId - Guild whose requests should be loaded.
+   * @returns A promise that resolves after request state is stored.
+   */
   loadJoinRequests: (apiBaseUrl: string, accessToken: string, guildId: string) => Promise<void>;
+  /**
+   * Sends a join request for the selected guild.
+   *
+   * @param apiBaseUrl - Base URL of the API server.
+   * @param accessToken - JWT access token of the requesting user.
+   * @param guildId - Guild the user wants to join.
+   * @returns A promise that resolves after request status is reflected locally.
+   */
   requestJoin: (apiBaseUrl: string, accessToken: string, guildId: string) => Promise<void>;
   setBackgroundUrl: (backgroundUrl: string) => void;
   setEmblemUrl: (emblemUrl: string) => void;
   setName: (name: string) => void;
   setThemeColor: (themeColor: GuildThemeColor, emblemUrl: string) => void;
+  /**
+   * Merges a guild returned by another screen into all local guild collections.
+   *
+   * @param guild - Fresh guild data from the API.
+   * @returns Nothing.
+   */
   syncGuild: (guild: Guild) => void;
+  /**
+   * Persists a guild's visual identity.
+   *
+   * @param apiBaseUrl - Base URL of the API server.
+   * @param accessToken - JWT access token of a user allowed to edit the guild.
+   * @param guildId - Guild being updated.
+   * @param themeColor - Selected guild theme color.
+   * @param emblemUrl - Selected guild emblem URL.
+   * @param backgroundUrl - Selected guild hero background URL.
+   * @returns A promise that resolves after local guild state is updated.
+   */
   updateGuildAppearance: (
     apiBaseUrl: string,
     accessToken: string,
@@ -82,6 +159,13 @@ function authHeaders(accessToken: string) {
   };
 }
 
+/**
+ * Inserts or replaces a guild in a list while keeping newest guilds first.
+ *
+ * @param guilds - Existing guild list.
+ * @param guild - Guild returned by the API.
+ * @returns A guild list containing the fresh guild state.
+ */
 function upsertGuild(guilds: Guild[], guild: Guild) {
   if (guilds.some((existingGuild) => existingGuild._id === guild._id)) {
     return guilds.map((existingGuild) => (existingGuild._id === guild._id ? guild : existingGuild));
@@ -90,6 +174,7 @@ function upsertGuild(guilds: Guild[], guild: Guild) {
   return [guild, ...guilds];
 }
 
+/** Zustand store for guild lists, creation drafts, join requests, and appearance updates. */
 export const useGuildStore = create<GuildState>((set, get) => ({
   availableGuilds: [],
   error: null,

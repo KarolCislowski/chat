@@ -7,11 +7,22 @@ import type { UserAccount, UserProfile } from "../../../stores/auth-store";
 import type { ChatView, Message } from "../../../stores/chat-store";
 import { MessageItem } from "./message-item";
 
+/** Props for the scrollable message timeline and inline status alerts. */
 type MessageListProps = {
+  /** Current account, used to align and label owned messages. */
   account: UserAccount | null;
+  /** Active channel, used to reset scroll position on navigation. */
   activeChannel: ChatView;
+  /** Visual tokens for message bubbles in the active channel. */
   appearance: ChannelAppearance;
+  /** Latest realtime connection error, if any. */
   connectionError: string | null;
+  /**
+   * Formats the source channel label for messages in the open view.
+   *
+   * @param message - Message whose channel should be labeled.
+   * @returns Human-readable channel label.
+   */
   getMessageChannelLabel: (message: Message) => string;
   guildError: string | null;
   healthError: string | null;

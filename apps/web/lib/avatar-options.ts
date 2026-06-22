@@ -1,3 +1,4 @@
+/** Bundled avatar assets available for user profile selection. */
 export const avatarOptions = [
   "/assets/imgs/avatars/avatar_001_14_14_38_r1_c1.png",
   "/assets/imgs/avatars/avatar_002_14_14_38_r1_c2.png",
@@ -109,8 +110,15 @@ export const avatarOptions = [
   "/assets/imgs/avatars/avatar_108_15_26_45_r2_c3.png",
 ] as const;
 
+/** Default avatar used when a profile has no valid selected avatar. */
 export const defaultAvatar = avatarOptions[0];
 
+/**
+ * Ensures an avatar path points to one of the bundled avatar assets.
+ *
+ * @param avatarUrl - Persisted avatar URL from a profile.
+ * @returns A valid avatar path, falling back to the default avatar when needed.
+ */
 export function resolveAvatarPath(avatarUrl: string | null | undefined) {
   return avatarUrl && avatarOptions.includes(avatarUrl as (typeof avatarOptions)[number]) ? avatarUrl : defaultAvatar;
 }

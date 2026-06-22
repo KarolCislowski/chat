@@ -13,12 +13,20 @@ export type ChannelAppearance = {
   softBg: string;
 };
 
+/** Visual tokens used by the composer for the currently selected destination. */
 export type ComposeAppearance = {
   accent: string;
   badgeColor: string;
   messageBorder: string;
 };
 
+/**
+ * Converts a hex color to an rgba CSS color string.
+ *
+ * @param hexColor - Color in #RRGGBB or RRGGBB format.
+ * @param alpha - Alpha channel value between 0 and 1.
+ * @returns CSS rgba color string.
+ */
 export function hexToRgba(hexColor: string, alpha: number) {
   const normalizedHex = hexColor.replace("#", "");
   const red = parseInt(normalizedHex.slice(0, 2), 16);
@@ -28,7 +36,19 @@ export function hexToRgba(hexColor: string, alpha: number) {
   return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
-export function getChannelAppearance(channel: ChatView, activeGuild: Guild | null, labels: { globalChat: string; guilds: string; openChat: string; whisper: string }): ChannelAppearance {
+/**
+ * Resolves the visual identity for the active chat view.
+ *
+ * @param channel - Chat view currently rendered by the page.
+ * @param activeGuild - Guild data used to derive guild-specific theme colors.
+ * @param labels - Localized labels for generic channel types.
+ * @returns A complete token set for channel styling.
+ */
+export function getChannelAppearance(
+  channel: ChatView,
+  activeGuild: Guild | null,
+  labels: { globalChat: string; guilds: string; openChat: string; whisper: string },
+): ChannelAppearance {
   if (channel.type === "open") {
     return {
       accent: "#60a5fa",
@@ -82,6 +102,13 @@ export function getChannelAppearance(channel: ChatView, activeGuild: Guild | nul
   };
 }
 
+/**
+ * Resolves composer styling for the destination currently selected by the user.
+ *
+ * @param channel - Concrete channel receiving the next message.
+ * @param composeGuild - Guild data used for guild-specific composer accents.
+ * @returns A token set for composer fields and send button styling.
+ */
 export function getComposeAppearance(channel: ChatChannel, composeGuild: Guild | null): ComposeAppearance {
   if (channel.type === "guild") {
     const accent = getGuildThemeAccent(composeGuild?.themeColor);

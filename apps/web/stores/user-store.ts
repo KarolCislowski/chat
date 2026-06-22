@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { OnlineStatus } from "./chat-store";
 
+/** Lightweight user profile used by chat lists, whispers, and presence UI. */
 export type ChatUser = {
   id: string;
   accountId: string;
@@ -15,7 +16,21 @@ type UserState = {
   error: string | null;
   isLoading: boolean;
   users: ChatUser[];
+  /**
+   * Loads all users that can participate in chat interactions.
+   *
+   * @param apiBaseUrl - Base URL of the API server.
+   * @param accessToken - JWT access token of the signed-in user.
+   * @returns A promise that resolves after users or an error are stored.
+   */
   loadUsers: (apiBaseUrl: string, accessToken: string) => Promise<void>;
+  /**
+   * Applies a realtime presence update to the cached user list.
+   *
+   * @param accountId - Account ID whose presence changed.
+   * @param onlineStatus - Latest presence value received from the websocket.
+   * @returns Nothing.
+   */
   updateUserPresence: (accountId: string, onlineStatus: OnlineStatus) => void;
 };
 
@@ -26,6 +41,7 @@ async function getErrorMessage(response: Response) {
   return message ?? `Request failed with ${response.status}`;
 }
 
+/** Zustand store for user discovery and realtime presence updates. */
 export const useUserStore = create<UserState>((set) => ({
   error: null,
   isLoading: false,

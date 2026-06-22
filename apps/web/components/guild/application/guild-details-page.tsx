@@ -15,6 +15,7 @@ import { PageFrame } from "../../shared/ui/page-frame";
 import { GuildAppearancePicker } from "../ui/guild-appearance-picker";
 import { GuildBackgroundPicker } from "../ui/guild-background-picker";
 
+/** Member profile entry displayed in guild details management. */
 type GuildMemberProfile = {
   userId: string;
   role: GuildRole;
@@ -28,6 +29,7 @@ type GuildMemberProfile = {
   } | null;
 };
 
+/** Detailed guild payload including member profiles for owner management. */
 type GuildDetails = Guild & {
   memberProfiles: GuildMemberProfile[];
 };
@@ -55,9 +57,17 @@ async function getErrorMessage(response: Response) {
 }
 
 type GuildDetailsPageProps = {
+  /** Guild ID read from the guild details route. */
   guildId: string;
 };
 
+/**
+ * Renders the guild details and management page.
+ *
+ * @param props - Route-level guild details props.
+ * @param props.guildId - Guild ID to load and manage.
+ * @returns Guild details page with members and appearance controls.
+ */
 export function GuildDetailsPage({ guildId }: GuildDetailsPageProps) {
   const router = useRouter();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";

@@ -2,12 +2,16 @@ import { create } from "zustand";
 import { io, Socket } from "socket.io-client";
 import { useUserStore } from "./user-store";
 
+/** API health response used to report backend and database availability. */
 export type ApiHealth = {
   status: string;
   database: string;
 };
 
+/** Describes the current Socket.IO lifecycle state used by the chat UI. */
 export type ChatConnectionStatus = "connected" | "connecting" | "disconnected";
+
+/** Identifies a concrete destination that can receive newly composed messages. */
 export type ChatChannel =
   | {
       type: "global";
@@ -21,9 +25,14 @@ export type ChatChannel =
       recipientId: string;
       type: "whisper";
     };
+
+/** Identifies the channel currently rendered by the message list. */
 export type ChatView = ChatChannel | { type: "open" };
+
+/** Presence state broadcast by the realtime gateway for each account. */
 export type OnlineStatus = "offline" | "online" | "away" | "busy";
 
+/** Message payload returned by the API and broadcast over the chat websocket. */
 export type Message = {
   _id: string;
   senderId: string;
@@ -60,11 +69,48 @@ type ChatState = {
   isChatViewVisible: boolean;
   messages: Message[];
   unreadByChannel: Record<string, number>;
+  /**
+   * Opens the websocket connection for authenticated chat events.
+   *
+   * @param apiBaseUrl - Base URL of the API server.
+   * @param accessToken - JWT access token used by the websocket handshake.
+   * @returns Nothing; connection state is written into the store.
+   */
   connectRealtime: (apiBaseUrl: string, accessToken: string) => void;
+  /**
+   * Closes the websocket connection and clears transient chat state.
+   *
+   * @returns Nothing.
+   */
   disconnectRealtime: () => void;
+  /**
+   * Loads API health details displayed by the shell and diagnostics UI.
+   *
+   * @param apiBaseUrl - Base URL of the API server.
+   * @returns A promise that resolves after the store is updated.
+   */
   loadHealth: (apiBaseUrl: string) => Promise<void>;
+  /**
+   * Loads messages for the active channel and clears unread state for it.
+   *
+   * @param apiBaseUrl - Base URL of the API server.
+   * @param accessToken - JWT access token used for the request.
+   * @returns A promise that resolves after messages or an error are stored.
+   */
   loadMessages: (apiBaseUrl: string, accessToken: string) => Promise<void>;
+  /**
+   * Sends a message to the current compose channel through the websocket.
+   *
+   * @param content - Raw composer text; empty or whitespace-only values are ignored.
+   * @returns Nothing.
+   */
   sendMessage: (content: string) => void;
+  /**
+   * Changes the displayed channel and resets channel-specific transient state.
+   *
+   * @param channel - Channel view that should become active.
+   * @returns Nothing.
+   */
   setActiveChannel: (channel: ChatView) => void;
   setChatViewVisible: (isVisible: boolean) => void;
   setComposeChannel: (channel: ChatChannel) => void;
@@ -74,6 +120,13 @@ type ChatState = {
 
 let socket: Socket | null = null;
 
+/**
+ * Adds a message to a sorted list unless it has already been received.
+ *
+ * @param messages - Existing messages for the active channel.
+ * @param message - Newly loaded or realtime message.
+ * @returns A chronological message list with no duplicate IDs.
+ */
 function upsertMessage(messages: Message[], message: Message) {
   if (messages.some((existingMessage) => existingMessage._id === message._id)) {
     return messages;
@@ -82,6 +135,13 @@ function upsertMessage(messages: Message[], message: Message) {
   return [...messages, message].sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
 }
 
+/**
+ * Checks whether a message belongs in the currently rendered channel view.
+ *
+ * @param message - Message returned by the API or websocket.
+ * @param channel - Chat view currently displayed by the UI.
+ * @returns True when the message should be visible in the provided channel.
+ */
 function isMessageForChannel(message: Message, channel: ChatView) {
   if (channel.type === "open") {
     return true;
@@ -98,6 +158,12 @@ function isMessageForChannel(message: Message, channel: ChatView) {
   return message.channelType === "guild" && message.guildId === channel.guildId;
 }
 
+/**
+ * Builds the stable key used for unread counters and compose select values.
+ *
+ * @param channel - Chat channel or aggregate open view.
+ * @returns A stable string key for the channel.
+ */
 export function getChatChannelKey(channel: ChatView) {
   if (channel.type === "open") {
     return "open";
@@ -114,6 +180,13 @@ export function getChatChannelKey(channel: ChatView) {
   return `whisper:${channel.recipientId}`;
 }
 
+/**
+ * Resolves the unread-counter key for a message from the current user's perspective.
+ *
+ * @param message - Message that may increment unread state.
+ * @param currentAccountId - Account ID of the signed-in user, if known.
+ * @returns The channel key to increment, or null when the message is incomplete.
+ */
 function getMessageChannelKey(message: Message, currentAccountId: string | null) {
   if (message.channelType === "global") {
     return "global";
@@ -131,6 +204,13 @@ function getMessageChannelKey(message: Message, currentAccountId: string | null)
   return null;
 }
 
+/**
+ * Clears unread counters for a channel view.
+ *
+ * @param unreadByChannel - Current unread counter map.
+ * @param channel - Channel that has just been opened or viewed.
+ * @returns A new unread map when anything changed, otherwise the original map.
+ */
 function clearUnread(unreadByChannel: Record<string, number>, channel: ChatView) {
   if (channel.type === "open") {
     return {};
@@ -154,6 +234,7 @@ async function getErrorMessage(response: Response) {
   return message ?? `Request failed with ${response.status}`;
 }
 
+/** Zustand store that owns chat websocket state, messages, composer state, and unread counters. */
 export const useChatStore = create<ChatState>((set, get) => ({
   activeChannel: { type: "open" },
   composeChannel: { type: "global" },

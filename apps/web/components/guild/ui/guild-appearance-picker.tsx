@@ -4,11 +4,23 @@ import { Box, Button, Tooltip } from "@mui/material";
 import { getGuildFlagSet, guildFlagSets } from "../../../lib/guild-flags";
 import type { GuildThemeColor } from "../../../lib/guild-flags";
 
+/** Props for the guild theme color and emblem picker. */
 type GuildAppearancePickerProps = {
+  /** Whether controls should be disabled while saving or when access is read-only. */
   disabled: boolean;
+  /** Currently selected guild emblem URL. */
   emblemUrl: string;
+  /** Optional maximum height for the emblem grid. */
   maxHeight?: number;
+  /**
+   * Handles selecting a theme color or emblem.
+   *
+   * @param themeColor - Selected flag color set.
+   * @param emblemUrl - Selected emblem asset URL.
+   * @returns Nothing.
+   */
   onChange: (themeColor: GuildThemeColor, emblemUrl: string) => void;
+  /** Currently selected guild theme color. */
   themeColor: GuildThemeColor;
 };
 

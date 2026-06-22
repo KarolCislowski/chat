@@ -6,11 +6,22 @@ import { ChatView } from "../../../../stores/chat-store";
 import type { Guild } from "../../../../stores/guild-store";
 import { ChannelPrimary, railItemSx } from "./sidebar-rail";
 
+/** Props for one guild channel entry in the sidebar rail. */
 type GuildRailItemProps = {
+  /** Channel currently displayed in the main chat panel. */
   activeChannel: ChatView;
+  /** Whether this item should be disabled for unauthenticated users. */
   disabled: boolean;
+  /** Guild represented by this rail item. */
   guild: Guild;
+  /**
+   * Switches the active channel when the guild is selected.
+   *
+   * @param channel - Guild channel represented by this item.
+   * @returns Nothing.
+   */
   onChannelChange: (channel: ChatView) => void;
+  /** Unread counters keyed by chat channel. */
   unreadByChannel: Record<string, number>;
 };
 

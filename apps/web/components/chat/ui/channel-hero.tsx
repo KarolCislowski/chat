@@ -5,12 +5,19 @@ import type { Guild } from "../../../stores/guild-store";
 import type { ChatUser } from "../../../stores/user-store";
 import { ChannelHeroAction, ChannelHeroAvatar, ChannelHeroContent, getChannelHeroPresentation } from "./channel-hero-parts";
 
+/** Props for the visual hero shown above the active chat message list. */
 type ChannelHeroProps = {
+  /** Active chat view used to choose hero artwork and actions. */
   activeChannel: ChatView;
+  /** Localized display title for the active channel. */
   activeChannelTitle: string;
+  /** Active guild data when the channel is guild-specific. */
   activeGuild: Guild | null;
+  /** Active whisper recipient when the channel is a whisper. */
   activeWhisperUser: ChatUser | null;
+  /** Visual tokens resolved for the active channel. */
   appearance: ChannelAppearance;
+  /** Translation dictionary used for labels and action text. */
   t: Record<string, string>;
 };
 

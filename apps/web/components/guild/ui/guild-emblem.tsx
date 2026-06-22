@@ -4,8 +4,11 @@ import { Box } from "@mui/material";
 import { resolveGuildEmblemUrl } from "../../../lib/guild-flags";
 import type { Guild } from "../../../stores/guild-store";
 
+/** Props for rendering a guild emblem with the correct vertical banner ratio. */
 type GuildEmblemProps = {
+  /** Guild appearance fields needed to resolve the emblem image. */
   guild: Pick<Guild, "emblemUrl" | "name" | "themeColor">;
+  /** Base emblem size used to derive banner width and height. */
   size?: number;
 };
 

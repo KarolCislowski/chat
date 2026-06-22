@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { UiLanguage } from "../i18n/translations";
 
+/** Account identity returned by authentication endpoints. */
 export type UserAccount = {
   id: string;
   email: string;
@@ -9,6 +10,7 @@ export type UserAccount = {
   createdAt: string;
 };
 
+/** Public profile data attached to an authenticated account. */
 export type UserProfile = {
   id: string;
   accountId: string;
@@ -21,6 +23,7 @@ export type UserProfile = {
 
 export type OnlineStatus = UserProfile["onlineStatus"];
 
+/** Token pair returned by authentication endpoints. */
 export type AuthTokens = {
   accessToken: string;
   refreshToken: string;
@@ -34,6 +37,7 @@ type AuthResponse = {
 
 type AuthMode = "login" | "register";
 
+/** Partial payload accepted by the profile update endpoint. */
 export type ProfileUpdateInput = Partial<
   Pick<UserProfile, "avatarUrl" | "displayName" | "language" | "onlineStatus" | "statusMessage">
 >;
@@ -46,13 +50,56 @@ type AuthState = {
   mode: AuthMode;
   profile: UserProfile | null;
   tokens: AuthTokens | null;
+  /**
+   * Returns a usable access token, refreshing the session shortly before expiry.
+   *
+   * @param apiBaseUrl - Base URL of the API server.
+   * @returns A valid access token, or null when the session cannot be refreshed.
+   */
   getFreshAccessToken: (apiBaseUrl: string) => Promise<string | null>;
+  /**
+   * Authenticates an existing user and stores the returned session.
+   *
+   * @param apiBaseUrl - Base URL of the API server.
+   * @param email - User email address.
+   * @param password - User password; never persisted in the client store.
+   * @returns A promise that resolves after auth state is updated.
+   */
   login: (apiBaseUrl: string, email: string, password: string) => Promise<void>;
+  /**
+   * Invalidates the current session on the API when possible and clears local auth state.
+   *
+   * @param apiBaseUrl - Base URL of the API server.
+   * @returns A promise that resolves after local state is cleared.
+   */
   logout: (apiBaseUrl: string) => Promise<void>;
+  /**
+   * Creates a new account and stores the returned authenticated session.
+   *
+   * @param apiBaseUrl - Base URL of the API server.
+   * @param email - New account email address.
+   * @param password - New account password; never persisted in the client store.
+   * @param displayName - Initial public display name.
+   * @returns A promise that resolves after auth state is updated.
+   */
   register: (apiBaseUrl: string, email: string, password: string, displayName: string) => Promise<void>;
   setHasHydrated: (hasHydrated: boolean) => void;
   setMode: (mode: AuthMode) => void;
+  /**
+   * Persists the selected UI language to the user's profile.
+   *
+   * @param apiBaseUrl - Base URL of the API server.
+   * @param language - UI language selected by the user.
+   * @returns A promise that resolves after the profile update attempt finishes.
+   */
   updateLanguagePreference: (apiBaseUrl: string, language: UiLanguage) => Promise<void>;
+  /**
+   * Updates mutable profile fields for the signed-in account.
+   *
+   * @param apiBaseUrl - Base URL of the API server.
+   * @param profileUpdate - Partial profile payload to patch.
+   * @returns True when the profile was saved successfully.
+   */
   updateProfile: (apiBaseUrl: string, profileUpdate: ProfileUpdateInput) => Promise<boolean>;
 };
 
@@ -79,6 +126,12 @@ async function requestAuth(apiBaseUrl: string, path: string, body: unknown): Pro
   return response.json() as Promise<AuthResponse>;
 }
 
+/**
+ * Reads the expiration timestamp from a JWT access token without validating it.
+ *
+ * @param accessToken - JWT access token returned by the API.
+ * @returns Expiration timestamp in milliseconds, or null when it cannot be read.
+ */
 function getTokenExpiration(accessToken: string) {
   const [, payload] = accessToken.split(".");
 
@@ -94,6 +147,12 @@ function getTokenExpiration(accessToken: string) {
   }
 }
 
+/**
+ * Checks whether a token should be refreshed before another authenticated request.
+ *
+ * @param accessToken - JWT access token returned by the API.
+ * @returns True when the token is missing expiry data or expires within 30 seconds.
+ */
 function shouldRefreshAccessToken(accessToken: string) {
   const expiresAt = getTokenExpiration(accessToken);
 
@@ -104,6 +163,7 @@ function shouldRefreshAccessToken(accessToken: string) {
   return expiresAt - Date.now() < 30_000;
 }
 
+/** Persisted Zustand store for authentication, profile, and token refresh state. */
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({

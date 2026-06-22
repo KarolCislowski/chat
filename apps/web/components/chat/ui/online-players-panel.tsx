@@ -3,11 +3,23 @@ import { Avatar, Box, Chip, IconButton, Paper, TextField, Typography } from "@mu
 import { resolveAvatarPath } from "../../../lib/avatar-options";
 import { ChatUser } from "../../../stores/user-store";
 
+/** Props for the online player list and API status side panel. */
 type OnlinePlayersPanelProps = {
+  /** Localized API status text. */
   apiStatus: string;
+  /** Whether the API health check reports a usable connection. */
   isApiConnected: boolean;
+  /**
+   * Opens the action menu for a player.
+   *
+   * @param event - Button click event used as the menu anchor.
+   * @param user - Player selected by the user.
+   * @returns Nothing.
+   */
   onPlayerMenuOpen: (event: MouseEvent<HTMLButtonElement>, user: ChatUser) => void;
+  /** Users currently shown as online. */
   onlineUsers: ChatUser[];
+  /** Translation dictionary used for labels and empty states. */
   t: Record<string, string>;
 };
 

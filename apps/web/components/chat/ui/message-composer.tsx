@@ -5,17 +5,44 @@ import { ChatChannel, getChatChannelKey } from "../../../stores/chat-store";
 import { Guild } from "../../../stores/guild-store";
 import { ChatUser } from "../../../stores/user-store";
 
+/** Props required to render and submit the chat message composer. */
 type MessageComposerProps = {
+  /** Active view type; the open view exposes the destination selector. */
   activeChannelType: "open" | "global" | "guild" | "whisper";
+  /** Visual tokens for the currently selected compose destination. */
   appearance: ComposeAppearance;
+  /** Concrete destination receiving the next message. */
   composeChannel: ChatChannel;
+  /** Realtime connection state used to enable or disable sending. */
   connectionStatus: string;
+  /** Current unsent composer text. */
   draft: string;
+  /** Guild destinations available to the current user. */
   guilds: Guild[];
+  /**
+   * Handles selecting a different message destination in the open view.
+   *
+   * @param event - MUI select change event containing the channel key.
+   * @returns Nothing.
+   */
   onComposeChannelChange: (event: SelectChangeEvent<string>) => void;
+  /**
+   * Writes the latest draft value to the owning state.
+   *
+   * @param draft - New composer text.
+   * @returns Nothing.
+   */
   onDraftChange: (draft: string) => void;
+  /**
+   * Submits the composer form.
+   *
+   * @param event - Form submit event from the composer form.
+   * @returns Nothing.
+   */
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  /** Translation dictionary used for labels and placeholders. */
   t: Record<string, string>;
+  /** Whisper destinations available to the current user. */
   users: ChatUser[];
 };
 

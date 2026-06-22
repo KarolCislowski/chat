@@ -9,6 +9,7 @@ import { OnlineStatus, useAuthStore } from "../../../stores/auth-store";
 import { useLanguageStore } from "../../../stores/language-store";
 import { PageFrame } from "../../shared/ui/page-frame";
 
+/** Public profile payload returned by account profile preview endpoints. */
 type PublicProfile = {
   id: string;
   accountId: string;
@@ -35,9 +36,17 @@ async function getErrorMessage(response: Response) {
 }
 
 type ProfilePreviewPageProps = {
+  /** Account ID read from the profile preview route. */
   accountId: string;
 };
 
+/**
+ * Renders a read-only profile preview for another player, or redirects to own data when matched.
+ *
+ * @param props - Route-level profile preview props.
+ * @param props.accountId - Account ID of the profile to display.
+ * @returns Public profile preview page.
+ */
 export function ProfilePreviewPage({ accountId }: ProfilePreviewPageProps) {
   const router = useRouter();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";

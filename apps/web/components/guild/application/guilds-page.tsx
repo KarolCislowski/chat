@@ -15,6 +15,12 @@ import { useGuildStore } from "../../../stores/guild-store";
 import type { Guild } from "../../../stores/guild-store";
 import { useLanguageStore } from "../../../stores/language-store";
 
+/**
+ * Checks whether the current user's membership role can manage guild requests and appearance.
+ *
+ * @param guild - Guild with the current user's membership metadata.
+ * @returns True when the user is an owner or officer.
+ */
 function canManageGuild(guild: Guild) {
   return guild.membership.role === "owner" || guild.membership.role === "officer";
 }
@@ -51,6 +57,11 @@ const fieldSx = {
   },
 };
 
+/**
+ * Renders guild creation, discovery, membership, and appearance management.
+ *
+ * @returns Guild management page for the signed-in user.
+ */
 export function GuildsPage() {
   const router = useRouter();
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:5000";

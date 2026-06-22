@@ -6,14 +6,28 @@ import type { ChannelAppearance } from "../domain/appearance";
 import type { UserAccount, UserProfile } from "../../../stores/auth-store";
 import type { ChatView, Message } from "../../../stores/chat-store";
 
+/** Props for a single rendered chat message. */
 type MessageItemProps = {
+  /** Current signed-in account, used to detect owned messages. */
   account: UserAccount | null;
+  /** Active chat view used to decide whether channel badges are shown. */
   activeChannel: ChatView;
+  /** Visual tokens for the message bubble. */
   appearance: ChannelAppearance;
+  /**
+   * Formats the source channel label for open-view messages.
+   *
+   * @param message - Message whose channel should be labeled.
+   * @returns Human-readable channel label.
+   */
   getMessageChannelLabel: (message: Message) => string;
+  /** Active locale used by the timestamp formatter. */
   language: string;
+  /** Message payload to render. */
   message: Message;
+  /** Current user's profile, used for owned message display data. */
   profile: UserProfile | null;
+  /** Translation dictionary used for fallback labels. */
   t: Record<string, string>;
 };
 

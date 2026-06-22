@@ -9,6 +9,7 @@ import type { ChatView } from "../../../stores/chat-store";
 import type { Guild } from "../../../stores/guild-store";
 import type { ChatUser } from "../../../stores/user-store";
 
+/** Fully resolved visual content for the channel hero. */
 export type ChannelHeroPresentation = {
   actionHref: string;
   actionLabel: string;
@@ -26,6 +27,12 @@ type ChannelHeroContext = {
   t: Record<string, string>;
 };
 
+/**
+ * Resolves image assets, labels, and target links for the active channel hero.
+ *
+ * @param context - Active channel, optional entity data, appearance tokens, and translations.
+ * @returns Presentation data ready for hero subcomponents.
+ */
 export function getChannelHeroPresentation({ activeChannel, activeGuild, activeWhisperUser, appearance, t }: ChannelHeroContext): ChannelHeroPresentation {
   if (activeGuild) {
     return {
@@ -70,6 +77,7 @@ export function getChannelHeroPresentation({ activeChannel, activeGuild, activeW
   };
 }
 
+/** Props for the hero avatar or guild banner image. */
 type ChannelHeroAvatarProps = {
   appearance: ChannelAppearance;
   presentation: ChannelHeroPresentation;

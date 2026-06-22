@@ -3,10 +3,20 @@
 import { Box, Button, Tooltip } from "@mui/material";
 import { guildBackgroundOptions, resolveGuildBackgroundUrl } from "../../../lib/guild-flags";
 
+/** Props for the selectable guild hero background grid. */
 type GuildBackgroundPickerProps = {
+  /** Currently selected or persisted background URL. */
   backgroundUrl: string;
+  /** Whether background controls should be disabled. */
   disabled: boolean;
+  /** Optional minimum width for each background thumbnail column. */
   minColumnWidth?: number;
+  /**
+   * Handles selecting a guild background image.
+   *
+   * @param backgroundUrl - Selected background asset URL.
+   * @returns Nothing.
+   */
   onChange: (backgroundUrl: string) => void;
 };
 

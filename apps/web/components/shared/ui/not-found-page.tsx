@@ -4,6 +4,11 @@ import Link from "next/link";
 import { Box, Button, Typography } from "@mui/material";
 import { useLanguageStore } from "../../../stores/language-store";
 
+/**
+ * Renders the localized 404 screen with portal artwork and a return action.
+ *
+ * @returns Not-found page content for Next.js unmatched routes.
+ */
 export function NotFoundPage() {
   const t = useLanguageStore((state) => state.t);
 
