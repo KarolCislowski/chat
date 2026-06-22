@@ -3,20 +3,15 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Avatar, Box, Button, Chip, MenuItem, Paper, Select, Tooltip, Typography } from "@mui/material";
+import { Alert, Avatar, Box, Button, Chip, MenuItem, Paper, Select, Typography } from "@mui/material";
+import { GuildAppearancePicker } from "../../../components/guild/guild-appearance-picker";
+import { GuildBackgroundPicker } from "../../../components/guild/guild-background-picker";
 import { PageFrame } from "../../../components/layout/page-frame";
 import { resolveAvatarPath } from "../../../lib/avatar-options";
-import {
-  getGuildFlagSet,
-  getGuildThemeAccent,
-  guildBackgroundOptions,
-  guildFlagSets,
-  GuildThemeColor,
-  resolveGuildBackgroundUrl,
-  resolveGuildEmblemUrl,
-} from "../../../lib/guild-flags";
+import { getGuildThemeAccent, resolveGuildBackgroundUrl, resolveGuildEmblemUrl } from "../../../lib/guild-flags";
+import type { GuildThemeColor } from "../../../lib/guild-flags";
 import { useAuthStore } from "../../../stores/auth-store";
-import { Guild, GuildRole } from "../../../stores/guild-store";
+import type { Guild, GuildRole } from "../../../stores/guild-store";
 import { useLanguageStore } from "../../../stores/language-store";
 
 type GuildMemberProfile = {
@@ -56,161 +51,6 @@ async function getErrorMessage(response: Response) {
   const message = Array.isArray(errorPayload?.message) ? errorPayload.message.join(", ") : errorPayload?.message;
 
   return message ?? `Request failed with ${response.status}`;
-}
-
-function GuildAppearancePicker({
-  disabled,
-  emblemUrl,
-  onChange,
-  themeColor,
-}: {
-  disabled: boolean;
-  emblemUrl: string;
-  onChange: (themeColor: GuildThemeColor, emblemUrl: string) => void;
-  themeColor: GuildThemeColor;
-}) {
-  const flagSet = getGuildFlagSet(themeColor);
-
-  return (
-    <Box sx={{ display: "grid", gap: 1.25 }}>
-      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
-        {guildFlagSets.map((set) => (
-          <Button
-            aria-label={set.label}
-            disabled={disabled}
-            key={set.label}
-            onClick={() => onChange(set.label, set.paths[0])}
-            sx={{
-              bgcolor: set.accent,
-              border: "1px solid",
-              borderColor: themeColor === set.label ? "#f8fbff" : "rgba(255, 255, 255, 0.22)",
-              boxShadow: themeColor === set.label ? `0 0 0 2px ${set.accent}55` : "none",
-              height: 24,
-              minWidth: 0,
-              p: 0,
-              width: 34,
-              "&:hover": { bgcolor: set.accent, opacity: 0.86 },
-            }}
-            type="button"
-          />
-        ))}
-      </Box>
-
-      <Box
-        sx={{
-          bgcolor: "rgba(2, 8, 18, 0.3)",
-          border: "1px solid rgba(96, 165, 250, 0.14)",
-          borderRadius: 1,
-          display: "grid",
-          gap: 0.8,
-          gridTemplateColumns: "repeat(auto-fill, minmax(42px, 1fr))",
-          maxHeight: 170,
-          overflowY: "auto",
-          p: 1,
-        }}
-      >
-        {flagSet.paths.map((flagPath) => {
-          const isSelected = flagPath === emblemUrl;
-
-          return (
-            <Tooltip
-              key={flagPath}
-              placement="top"
-              slotProps={{ tooltip: { sx: { bgcolor: "transparent", maxWidth: "none", p: 0 } } }}
-              title={
-                <Box sx={{ bgcolor: "rgba(2, 8, 18, 0.92)", border: `1px solid ${flagSet.accent}66`, borderRadius: 1, p: 1 }}>
-                  <Box component="img" alt="" src={flagPath} sx={{ display: "block", height: 190, objectFit: "contain", width: 128 }} />
-                </Box>
-              }
-            >
-              <Box component="span" sx={{ display: "block" }}>
-                <Button
-                  aria-label={flagPath}
-                  disabled={disabled}
-                  onClick={() => onChange(flagSet.label, flagPath)}
-                  sx={{
-                    bgcolor: isSelected ? "rgba(248, 251, 255, 0.08)" : "transparent",
-                    border: "1px solid",
-                    borderColor: isSelected ? `${flagSet.accent}` : "transparent",
-                    borderRadius: 1,
-                    minWidth: 0,
-                    p: 0.35,
-                    width: "100%",
-                    "&:hover": { bgcolor: "rgba(96, 165, 250, 0.1)", borderColor: flagSet.accent },
-                  }}
-                  type="button"
-                >
-                  <Box component="img" alt="" src={flagPath} sx={{ display: "block", height: 52, objectFit: "contain", width: 34 }} />
-                </Button>
-              </Box>
-            </Tooltip>
-          );
-        })}
-      </Box>
-    </Box>
-  );
-}
-
-function GuildBackgroundPicker({
-  backgroundUrl,
-  disabled,
-  onChange,
-}: {
-  backgroundUrl: string;
-  disabled: boolean;
-  onChange: (backgroundUrl: string) => void;
-}) {
-  const resolvedBackgroundUrl = resolveGuildBackgroundUrl(backgroundUrl);
-
-  return (
-    <Box
-      sx={{
-        bgcolor: "rgba(2, 8, 18, 0.3)",
-        border: "1px solid rgba(96, 165, 250, 0.14)",
-        borderRadius: 1,
-        display: "grid",
-        gap: 0.8,
-        gridTemplateColumns: "repeat(auto-fill, minmax(112px, 1fr))",
-        p: 1,
-      }}
-    >
-      {guildBackgroundOptions.map((option) => (
-        <Tooltip
-          key={option}
-          placement="top"
-          slotProps={{ tooltip: { sx: { bgcolor: "transparent", maxWidth: "none", p: 0 } } }}
-          title={
-            <Box sx={{ bgcolor: "rgba(2, 8, 18, 0.92)", border: "1px solid rgba(96, 165, 250, 0.38)", borderRadius: 1, p: 1 }}>
-              <Box component="img" alt="" src={option} sx={{ display: "block", height: 180, objectFit: "cover", width: 320 }} />
-            </Box>
-          }
-        >
-          <Box component="span" sx={{ display: "block" }}>
-            <Button
-              aria-label={option}
-              disabled={disabled}
-              onClick={() => onChange(option)}
-              sx={{
-                aspectRatio: "16 / 9",
-                backgroundImage: `linear-gradient(180deg, rgba(3, 10, 20, 0.08), rgba(3, 10, 20, 0.38)), url(${option})`,
-                backgroundPosition: "center",
-                backgroundSize: "cover",
-                border: "1px solid",
-                borderColor: option === resolvedBackgroundUrl ? "#f8fbff" : "rgba(96, 165, 250, 0.16)",
-                borderRadius: 1,
-                boxShadow: option === resolvedBackgroundUrl ? "0 0 0 2px rgba(96, 165, 250, 0.32)" : "none",
-                minWidth: 0,
-                p: 0,
-                width: "100%",
-                "&:hover": { borderColor: "#60a5fa", filter: "brightness(1.08)" },
-              }}
-              type="button"
-            />
-          </Box>
-        </Tooltip>
-      ))}
-    </Box>
-  );
 }
 
 export default function GuildDetailsPage() {
@@ -473,6 +313,7 @@ export default function GuildDetailsPage() {
                     <GuildAppearancePicker
                       disabled={isLoading}
                       emblemUrl={emblemUrl}
+                      maxHeight={170}
                       onChange={(nextThemeColor, nextEmblemUrl) => updateAppearance(nextThemeColor, nextEmblemUrl, backgroundUrl)}
                       themeColor={guild.themeColor}
                     />
@@ -482,6 +323,7 @@ export default function GuildDetailsPage() {
                     <GuildBackgroundPicker
                       backgroundUrl={backgroundUrl}
                       disabled={isLoading}
+                      minColumnWidth={112}
                       onChange={(nextBackgroundUrl) => updateAppearance(guild.themeColor, emblemUrl, nextBackgroundUrl)}
                     />
                   </>
