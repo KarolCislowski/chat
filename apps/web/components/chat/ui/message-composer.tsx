@@ -117,9 +117,17 @@ export function MessageComposer({
           disabled={connectionStatus !== "connected"}
           sx={{
             bgcolor: appearance.accent,
+            border: "1px solid transparent",
+            color: "#03131f",
+            fontWeight: 900,
             minWidth: { sm: 120 },
             "&:hover": {
               bgcolor: appearance.badgeColor,
+            },
+            "&.Mui-disabled": {
+              bgcolor: "rgba(8, 24, 39, 0.72)",
+              borderColor: appearance.messageBorder,
+              color: "rgba(229, 237, 247, 0.54)",
             },
           }}
           type="submit"
