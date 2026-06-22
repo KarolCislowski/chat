@@ -2,45 +2,19 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, MouseEvent, ReactNode, useEffect, useMemo, useState } from "react";
-import {
-  Box,
-  Avatar,
-  Button,
-  Chip,
-  Divider,
-  FormControl,
-  IconButton,
-  InputLabel,
-  List,
-  ListItemButton,
-  ListItemText,
-  Menu,
-  MenuItem,
-  Paper,
-  Select,
-  SelectChangeEvent,
-  TextField,
-  Typography,
-  Alert,
-  Badge,
-} from "@mui/material";
+import { FormEvent, MouseEvent, useEffect, useMemo, useState } from "react";
+import { Box, Button, Paper, SelectChangeEvent, Typography } from "@mui/material";
+import { ChannelHero } from "../components/chat/channel-hero";
+import { ChatSidebar } from "../components/chat/chat-sidebar";
+import { MessageComposer } from "../components/chat/message-composer";
+import { MessageList } from "../components/chat/message-list";
+import { OnlinePlayersPanel } from "../components/chat/online-players-panel";
+import { getChannelAppearance, getComposeAppearance, hexToRgba } from "../lib/chat/appearance";
 import { useAuthStore } from "../stores/auth-store";
-import { resolveAvatarPath } from "../lib/avatar-options";
-import { getGuildThemeAccent, resolveGuildBackgroundUrl, resolveGuildEmblemUrl } from "../lib/guild-flags";
-import { getChatChannelKey, useChatStore } from "../stores/chat-store";
-import { Guild, useGuildStore } from "../stores/guild-store";
+import { getChatChannelKey, Message, useChatStore } from "../stores/chat-store";
+import { useGuildStore } from "../stores/guild-store";
 import { useLanguageStore } from "../stores/language-store";
-import { useUserStore, type ChatUser } from "../stores/user-store";
-
-function hexToRgba(hexColor: string, alpha: number) {
-  const normalizedHex = hexColor.replace("#", "");
-  const red = parseInt(normalizedHex.slice(0, 2), 16);
-  const green = parseInt(normalizedHex.slice(2, 4), 16);
-  const blue = parseInt(normalizedHex.slice(4, 6), 16);
-
-  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
-}
+import { ChatUser, useUserStore } from "../stores/user-store";
 
 export default function Home() {
   const router = useRouter();
@@ -72,6 +46,8 @@ export default function Home() {
   const tokens = useAuthStore((state) => state.tokens);
   const language = useLanguageStore((state) => state.language);
   const t = useLanguageStore((state) => state.t);
+  const [playerMenuAnchor, setPlayerMenuAnchor] = useState<HTMLElement | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<ChatUser | null>(null);
 
   useEffect(() => {
     void loadHealth(apiBaseUrl);
@@ -91,94 +67,24 @@ export default function Home() {
 
   const isApiConnected = health?.status === "ok" && health.database === "connected";
   const isAuthenticated = Boolean(profile && tokens?.accessToken);
-  const activeGuild = activeChannel.type === "guild" ? guilds.find((guild) => guild._id === activeChannel.guildId) : null;
-  const composeGuild = composeChannel.type === "guild" ? guilds.find((guild) => guild._id === composeChannel.guildId) : null;
-  const activeGuildBackgroundUrl = activeGuild ? resolveGuildBackgroundUrl(activeGuild.backgroundUrl) : null;
+  const activeGuild = activeChannel.type === "guild" ? guilds.find((guild) => guild._id === activeChannel.guildId) ?? null : null;
+  const composeGuild = composeChannel.type === "guild" ? guilds.find((guild) => guild._id === composeChannel.guildId) ?? null : null;
   const activeChannelTitle =
     activeChannel.type === "open" ? t.openChat : activeChannel.type === "whisper" ? activeChannel.recipientDisplayName : activeGuild?.name ?? t.globalChat;
-  const activeWhisperUser = activeChannel.type === "whisper" ? users.find((user) => user.accountId === activeChannel.recipientId) : null;
-  const channelAppearance = useMemo(() => {
-    if (activeChannel.type === "open") {
-      return {
-        accent: "#60a5fa",
-        badgeBg: "rgba(96, 165, 250, 0.16)",
-        badgeColor: "#bfdbfe",
-        label: t.openChat,
-        messageBg: "rgba(96, 165, 250, 0.13)",
-        messageBorder: "rgba(96, 165, 250, 0.34)",
-        pageBg: "rgba(4, 15, 28, 0.72)",
-        softBg: "rgba(96, 165, 250, 0.08)",
-      };
-    }
-
-    if (activeChannel.type === "guild") {
-      const accent = getGuildThemeAccent(activeGuild?.themeColor);
-
-      return {
-        accent,
-        badgeBg: hexToRgba(accent, 0.16),
-        badgeColor: accent,
-        label: t.guilds,
-        messageBg: hexToRgba(accent, 0.13),
-        messageBorder: hexToRgba(accent, 0.36),
-        pageBg: "rgba(12, 17, 26, 0.78)",
-        softBg: hexToRgba(accent, 0.09),
-      };
-    }
-
-    if (activeChannel.type === "whisper") {
-      return {
-        accent: "#7dd3fc",
-        badgeBg: "rgba(125, 211, 252, 0.15)",
-        badgeColor: "#bae6fd",
-        label: t.whisper,
-        messageBg: "rgba(125, 211, 252, 0.12)",
-        messageBorder: "rgba(125, 211, 252, 0.32)",
-        pageBg: "rgba(4, 18, 32, 0.78)",
-        softBg: "rgba(125, 211, 252, 0.08)",
-      };
-    }
-
-    return {
-      accent: "#4ade80",
-      badgeBg: "rgba(74, 222, 128, 0.14)",
-      badgeColor: "#bbf7d0",
-      label: t.globalChat,
-      messageBg: "rgba(74, 222, 128, 0.11)",
-      messageBorder: "rgba(74, 222, 128, 0.3)",
-      pageBg: "rgba(3, 22, 20, 0.72)",
-      softBg: "rgba(74, 222, 128, 0.07)",
-    };
-  }, [activeChannel.type, activeGuild?.themeColor, t.globalChat, t.guilds, t.openChat, t.whisper]);
-  const composeAppearance = useMemo(() => {
-    if (composeChannel.type === "guild") {
-      const accent = getGuildThemeAccent(composeGuild?.themeColor);
-
-      return {
-        accent,
-        badgeColor: accent,
-        messageBorder: hexToRgba(accent, 0.32),
-      };
-    }
-
-    if (composeChannel.type === "whisper") {
-      return {
-        accent: "#2563eb",
-        badgeColor: "#1d4ed8",
-        messageBorder: "rgba(37, 99, 235, 0.28)",
-      };
-    }
-
-    return {
-      accent: "#0f766e",
-      badgeColor: "#0f5f59",
-      messageBorder: "rgba(20, 108, 95, 0.24)",
-    };
-  }, [composeChannel.type, composeGuild?.themeColor]);
+  const activeWhisperUser = activeChannel.type === "whisper" ? users.find((user) => user.accountId === activeChannel.recipientId) ?? null : null;
+  const channelAppearance = useMemo(
+    () =>
+      getChannelAppearance(activeChannel, activeGuild, {
+        globalChat: t.globalChat,
+        guilds: t.guilds,
+        openChat: t.openChat,
+        whisper: t.whisper,
+      }),
+    [activeChannel, activeGuild, t.globalChat, t.guilds, t.openChat, t.whisper],
+  );
+  const composeAppearance = useMemo(() => getComposeAppearance(composeChannel, composeGuild), [composeChannel, composeGuild]);
   const manageableGuilds = useMemo(() => guilds.filter((guild) => ["owner", "officer"].includes(guild.membership.role ?? "")), [guilds]);
   const onlineUsers = useMemo(() => users.filter((user) => user.onlineStatus !== "offline"), [users]);
-  const [playerMenuAnchor, setPlayerMenuAnchor] = useState<HTMLElement | null>(null);
-  const [selectedPlayer, setSelectedPlayer] = useState<ChatUser | null>(null);
 
   useEffect(() => {
     if (hasHydrated && !isAuthenticated) {
@@ -221,14 +127,6 @@ export default function Home() {
     sendMessage(text);
   }
 
-  function handleChannelChange(channel: Parameters<typeof setActiveChannel>[0]) {
-    setActiveChannel(channel);
-  }
-
-  function getComposeChannelValue(channel: typeof composeChannel) {
-    return getChatChannelKey(channel);
-  }
-
   function handleComposeChannelChange(event: SelectChangeEvent<string>) {
     const channelKey = event.target.value;
 
@@ -261,7 +159,7 @@ export default function Home() {
     }
   }
 
-  function getMessageChannelLabel(message: (typeof messages)[number]) {
+  function getMessageChannelLabel(message: Message) {
     if (message.channelType === "global") {
       return t.globalChat;
     }
@@ -285,7 +183,7 @@ export default function Home() {
   }
 
   function startWhisper(user: ChatUser) {
-    handleChannelChange({
+    setActiveChannel({
       recipientDisplayName: user.displayName,
       recipientId: user.accountId,
       type: "whisper",
@@ -310,132 +208,6 @@ export default function Home() {
     await inviteMember(apiBaseUrl, accessToken, guildId, player.accountId);
   }
 
-  function renderChannelPrimary(label: string, channel: Parameters<typeof setActiveChannel>[0], endAdornment?: ReactNode) {
-    const unreadCount = unreadByChannel[getChatChannelKey(channel)] ?? 0;
-
-    return (
-      <Box
-        component="span"
-        sx={{ alignItems: "center", columnGap: 1.75, display: "flex", flex: "1 1 auto", justifyContent: "space-between", minWidth: 0 }}
-      >
-        <Box component="span" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {label}
-        </Box>
-        {endAdornment}
-        {unreadCount > 0 ? (
-          <Badge
-            badgeContent={unreadCount > 99 ? "99+" : unreadCount}
-            color="primary"
-            sx={{ flex: "0 0 auto", ml: 1, mr: 1 }}
-          />
-        ) : null}
-      </Box>
-    );
-  }
-
-  function renderChannelAvatarRailPrimary(label: string, channel: Parameters<typeof setActiveChannel>[0], avatarPath: string, accent: string) {
-    return (
-      <Box component="span" sx={{ alignItems: "center", display: "flex", gap: 1.4, minWidth: 0 }}>
-        <Box
-          component="img"
-          alt=""
-          src={avatarPath}
-          sx={{
-            bgcolor: "rgba(2, 8, 18, 0.34)",
-            border: `1px solid ${accent}44`,
-            borderRadius: "50%",
-            display: "block",
-            flex: "0 0 auto",
-            height: 44,
-            objectFit: "cover",
-            width: 44,
-          }}
-        />
-        {renderChannelPrimary(label, channel)}
-      </Box>
-    );
-  }
-
-  function renderWhisperRailPrimary(user: ChatUser) {
-    return (
-      <Box component="span" sx={{ alignItems: "center", display: "flex", gap: 1.4, minWidth: 0 }}>
-        <Avatar
-          src={resolveAvatarPath(user.avatarUrl)}
-          sx={{
-            bgcolor: "#132337",
-            border: "1px solid rgba(125, 211, 252, 0.42)",
-            flex: "0 0 auto",
-            height: 44,
-            width: 44,
-          }}
-        />
-        {renderChannelPrimary(user.displayName, {
-          recipientDisplayName: user.displayName,
-          recipientId: user.accountId,
-          type: "whisper",
-        })}
-      </Box>
-    );
-  }
-
-  function renderGuildRailPrimary(guild: Guild) {
-    const accent = getGuildThemeAccent(guild.themeColor);
-
-    return (
-      <Box component="span" sx={{ alignItems: "stretch", display: "flex", gap: 1.35, minHeight: 68, minWidth: 0 }}>
-        <Box
-          component="img"
-          alt=""
-          src={resolveGuildEmblemUrl(guild.emblemUrl, guild.themeColor)}
-          sx={{
-            alignSelf: "stretch",
-            display: "block",
-            flex: "0 0 auto",
-            filter: `drop-shadow(0 0 8px ${accent}55)`,
-            height: 68,
-            objectFit: "contain",
-            width: 44,
-          }}
-        />
-        <Box component="span" sx={{ alignItems: "center", display: "flex", flex: "1 1 auto", minWidth: 0 }}>
-          {renderChannelPrimary(
-            guild.name,
-            { guildId: guild._id, type: "guild" },
-            <Box component="span" sx={{ color: "#b7c3cf", flex: "0 0 auto", fontSize: "0.78rem", fontWeight: 700 }}>
-              {guild.members.length}
-            </Box>,
-          )}
-        </Box>
-      </Box>
-    );
-  }
-
-  function railItemSx(isSelected: boolean, accent = "#60a5fa") {
-    return {
-      border: "1px solid transparent",
-      borderLeft: `3px solid ${isSelected ? accent : "transparent"}`,
-      borderRadius: 1,
-      color: "inherit",
-      display: "grid",
-      gap: 0.35,
-      minHeight: 62,
-      px: 1.3,
-      py: 0.85,
-      transition: "background-color 140ms ease, border-color 140ms ease",
-      "&:hover": {
-        bgcolor: "rgba(96, 165, 250, 0.07)",
-      },
-      "&.Mui-selected": {
-        background: "linear-gradient(90deg, rgba(37, 99, 235, 0.22), rgba(37, 99, 235, 0.04))",
-        borderColor: "rgba(96, 165, 250, 0.22)",
-        borderLeftColor: accent,
-      },
-      "&.Mui-selected:hover": {
-        bgcolor: "rgba(37, 99, 235, 0.16)",
-      },
-    };
-  }
-
   return (
     <Box
       component="main"
@@ -447,208 +219,22 @@ export default function Home() {
         overflow: "hidden",
       }}
     >
-      <Box
-        component="aside"
-        aria-label={t.conversations}
-        sx={{
-          background:
-            "linear-gradient(180deg, rgba(3, 10, 20, 0.82), rgba(3, 10, 20, 0.68)), radial-gradient(circle at 50% 100%, rgba(37, 99, 235, 0.16), transparent 42%)",
-          borderRight: { lg: "1px solid rgba(96, 165, 250, 0.16)" },
-          color: "#f8fafc",
-          display: "flex",
-          flexDirection: "column",
-          gap: 2.25,
-          gridColumn: { xs: "1", lg: "1" },
-          minHeight: 0,
-          overflowY: "auto",
-          p: { xs: 2.5, md: 2.25 },
-        }}
-      >
-        <List aria-label={t.conversations} disablePadding sx={{ display: "grid", gap: 0.45 }}>
-          <Typography
-            sx={{
-              borderBottom: "1px solid rgba(148, 163, 184, 0.14)",
-              color: "#aab9ca",
-              fontSize: "0.74rem",
-              fontWeight: 800,
-              letterSpacing: 1.4,
-              mb: 1,
-              pb: 1,
-              textTransform: "uppercase",
-            }}
-          >
-            Channels
-          </Typography>
-
-          <ListItemButton
-            disabled={!isAuthenticated}
-            onClick={() => handleChannelChange({ type: "open" })}
-            selected={isAuthenticated && activeChannel.type === "open"}
-            sx={railItemSx(isAuthenticated && activeChannel.type === "open", "#60a5fa")}
-          >
-            <ListItemText
-              primary={renderChannelAvatarRailPrimary(t.openChat, { type: "open" }, "/assets/imgs/open_avatar.png", "#60a5fa")}
-              slotProps={{
-                primary: { sx: { fontWeight: 700 } },
-              }}
-            />
-          </ListItemButton>
-
-          <ListItemButton
-            disabled={!isAuthenticated}
-            onClick={() => handleChannelChange({ type: "global" })}
-            selected={isAuthenticated && activeChannel.type === "global"}
-            sx={railItemSx(isAuthenticated && activeChannel.type === "global", "#4ade80")}
-          >
-            <ListItemText
-              primary={renderChannelAvatarRailPrimary(t.globalChat, { type: "global" }, "/assets/imgs/global_avatar.png", "#4ade80")}
-              slotProps={{
-                primary: { sx: { fontWeight: 700 } },
-              }}
-            />
-          </ListItemButton>
-
-          <Box sx={{ alignItems: "center", borderBottom: "1px solid rgba(148, 163, 184, 0.14)", display: "flex", justifyContent: "space-between", mb: 1, mt: 2.2, pb: 1 }}>
-            <Typography
-              sx={{
-                color: "#aab9ca",
-                fontSize: "0.74rem",
-                fontWeight: 800,
-                letterSpacing: 1.4,
-                textTransform: "uppercase",
-              }}
-            >
-              {t.guilds}
-            </Typography>
-            <IconButton component={Link} href="/guilds" size="small" sx={{ bgcolor: "rgba(96, 165, 250, 0.1)", color: "#bfdbfe", height: 28, width: 28 }}>
-              +
-            </IconButton>
-          </Box>
-
-          {guilds.map((guild) => (
-            <ListItemButton
-              disabled={!isAuthenticated}
-              key={guild._id}
-              onClick={() => handleChannelChange({ guildId: guild._id, type: "guild" })}
-              selected={activeChannel.type === "guild" && activeChannel.guildId === guild._id}
-              sx={{
-                ...railItemSx(activeChannel.type === "guild" && activeChannel.guildId === guild._id, getGuildThemeAccent(guild.themeColor)),
-                minHeight: 72,
-                overflow: "hidden",
-                py: 0,
-              }}
-            >
-              <ListItemText
-                primary={renderGuildRailPrimary(guild)}
-                slotProps={{
-                  primary: { sx: { fontWeight: 700 } },
-                }}
-              />
-            </ListItemButton>
-          ))}
-
-          <Typography
-            sx={{
-              borderBottom: "1px solid rgba(148, 163, 184, 0.14)",
-              color: "#aab9ca",
-              fontSize: "0.74rem",
-              fontWeight: 800,
-              letterSpacing: 1.4,
-              mb: 1,
-              mt: 2.2,
-              pb: 1,
-              textTransform: "uppercase",
-            }}
-          >
-            {t.whisper}
-          </Typography>
-
-          {users.length > 0 ? (
-            users.map((user) => (
-              <ListItemButton
-                disabled={!isAuthenticated}
-                key={user.accountId}
-                onClick={() => startWhisper(user)}
-                selected={activeChannel.type === "whisper" && activeChannel.recipientId === user.accountId}
-                sx={railItemSx(activeChannel.type === "whisper" && activeChannel.recipientId === user.accountId, "#7dd3fc")}
-              >
-                <ListItemText
-                  primary={
-                    <Box component="span" sx={{ alignItems: "center", display: "flex", gap: 1, justifyContent: "space-between", minWidth: 0 }}>
-                      {renderWhisperRailPrimary(user)}
-                      <IconButton
-                        aria-label={`${user.displayName} menu`}
-                        color="inherit"
-                        onClick={(event) => handlePlayerMenuOpen(event, user)}
-                        size="small"
-                        sx={{ color: "#f8fafc", flex: "0 0 auto", height: 28, width: 28 }}
-                        type="button"
-                      >
-                        <Box component="span" sx={{ fontSize: "1rem", lineHeight: 1 }}>
-                          ...
-                        </Box>
-                      </IconButton>
-                    </Box>
-                  }
-                  slotProps={{
-                    primary: { sx: { fontWeight: 700 } },
-                  }}
-                />
-              </ListItemButton>
-            ))
-          ) : (
-            <Typography sx={{ color: "#b7c3cf", fontSize: "0.85rem" }}>{t.noUsers}</Typography>
-          )}
-
-          <Menu
-            anchorEl={playerMenuAnchor}
-            onClose={handlePlayerMenuClose}
-            open={Boolean(playerMenuAnchor)}
-            slotProps={{
-              paper: {
-                sx: {
-                  bgcolor: "#081827",
-                  border: "1px solid rgba(96, 165, 250, 0.22)",
-                  color: "#e5edf7",
-                },
-              },
-            }}
-          >
-            {selectedPlayer ? <MenuItem onClick={() => startWhisper(selectedPlayer)}>{t.startWhisper}</MenuItem> : null}
-            {selectedPlayer
-              ? manageableGuilds
-                  .filter((guild) => !guild.members.includes(selectedPlayer.accountId))
-                  .map((guild) => (
-                    <MenuItem key={guild._id} onClick={() => void inviteSelectedPlayer(guild._id)}>
-                      {t.inviteToGuild} {guild.name}
-                    </MenuItem>
-                  ))
-              : null}
-          </Menu>
-
-        </List>
-
-        <Box sx={{ flex: 1, minHeight: 28 }} />
-
-        <Button
-          component={Link}
-          href="/guilds"
-          sx={{
-            borderColor: "rgba(96, 165, 250, 0.55)",
-            color: "#7dd3fc",
-            fontWeight: 800,
-            letterSpacing: 0.5,
-            py: 1.2,
-            "&:hover": {
-              borderColor: "#60a5fa",
-              bgcolor: "rgba(96, 165, 250, 0.1)",
-            },
-          }}
-          variant="outlined"
-        >
-          + {t.createGuild}
-        </Button>
-      </Box>
+      <ChatSidebar
+        activeChannel={activeChannel}
+        guilds={guilds}
+        isAuthenticated={isAuthenticated}
+        manageableGuilds={manageableGuilds}
+        onChannelChange={setActiveChannel}
+        onInviteSelectedPlayer={(guildId) => void inviteSelectedPlayer(guildId)}
+        onPlayerMenuClose={handlePlayerMenuClose}
+        onPlayerMenuOpen={handlePlayerMenuOpen}
+        onStartWhisper={startWhisper}
+        playerMenuAnchor={playerMenuAnchor}
+        selectedPlayer={selectedPlayer}
+        t={t}
+        unreadByChannel={unreadByChannel}
+        users={users}
+      />
 
       <Box
         component="section"
@@ -670,353 +256,45 @@ export default function Home() {
           rowGap: 2.25,
         }}
       >
-        <Box
-          component="section"
-          sx={{
-            alignItems: "center",
-            backgroundImage: `linear-gradient(90deg, rgba(3, 10, 20, 0.9) 0%, rgba(3, 10, 20, 0.58) 52%, rgba(3, 10, 20, 0.22) 100%), url(${
-              activeGuild
-                ? activeGuildBackgroundUrl
-                : activeChannel.type === "open"
-                  ? "/assets/imgs/open-bg.png"
-                  : activeChannel.type === "whisper"
-                    ? "/assets/imgs/whisper-bg.png"
-                    : "/assets/imgs/global-bg.png"
-            })`,
-            backgroundPosition: "center",
-            backgroundSize: "cover",
-            border: `1px solid ${channelAppearance.messageBorder}`,
-            borderRadius: 1,
-            boxShadow: "inset 0 -56px 90px rgba(2, 8, 18, 0.42), 0 18px 44px rgba(0, 0, 0, 0.22)",
-            display: "grid",
-            gap: { xs: 1.5, sm: 2.5 },
-            gridTemplateColumns: { xs: "74px minmax(0, 1fr)", md: activeGuild ? "116px minmax(0, 1fr) auto" : "96px minmax(0, 1fr) auto" },
-            minHeight: { xs: 234, md: 282 },
-            overflow: "hidden",
-            p: { xs: 2, md: 2.5 },
-            position: "relative",
-          }}
-        >
-          <Box
-            component="img"
-            alt=""
-            src={
-              activeGuild
-                ? resolveGuildEmblemUrl(activeGuild.emblemUrl, activeGuild.themeColor)
-                : activeChannel.type === "open"
-                  ? "/assets/imgs/open_avatar.png"
-                  : activeChannel.type === "whisper"
-                    ? resolveAvatarPath(activeWhisperUser?.avatarUrl)
-                    : "/assets/imgs/global_avatar.png"
-            }
-            sx={{
-              alignSelf: "center",
-              border: activeGuild ? "none" : `1px solid ${channelAppearance.messageBorder}`,
-              borderRadius: activeGuild ? 0 : "50%",
-              filter: activeGuild ? "drop-shadow(0 16px 24px rgba(0, 0, 0, 0.54))" : "drop-shadow(0 14px 20px rgba(0, 0, 0, 0.48))",
-              height: activeGuild ? "100%" : { xs: 70, md: 92 },
-              maxHeight: activeGuild ? { xs: 195, md: 246 } : undefined,
-              objectFit: activeGuild ? "contain" : "cover",
-              width: activeGuild ? { xs: 70, md: 108 } : { xs: 70, md: 92 },
-            }}
-          />
-
-          <Box sx={{ minWidth: 0 }}>
-            <Typography sx={{ color: channelAppearance.accent, fontSize: "0.72rem", fontWeight: 800, letterSpacing: 1.4, textTransform: "uppercase" }}>
-              {activeGuild ? t.guilds : channelAppearance.label}
-            </Typography>
-            <Typography
-              component="h3"
-              sx={{
-                color: "#f8fbff",
-                fontSize: { xs: "1.45rem", md: "2rem" },
-                fontWeight: 800,
-                lineHeight: 1.1,
-                mt: 0.5,
-                overflowWrap: "anywhere",
-                textShadow: "0 2px 18px rgba(0, 0, 0, 0.68)",
-              }}
-            >
-              {activeChannelTitle}
-            </Typography>
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 1.25 }}>
-              {activeGuild ? (
-                <>
-                  <Chip
-                    label={`${activeGuild.members.length} ${t.members}`}
-                    size="small"
-                    sx={{ bgcolor: hexToRgba(channelAppearance.accent, 0.18), color: "#f8fbff", fontWeight: 800 }}
-                  />
-                  <Chip
-                    label={`/${activeGuild.slug}`}
-                    size="small"
-                    sx={{ bgcolor: "rgba(2, 8, 18, 0.42)", color: "#bfdbfe", fontWeight: 700 }}
-                  />
-                </>
-              ) : activeChannel.type === "whisper" ? (
-                <Chip
-                  label={activeWhisperUser?.onlineStatus ?? t.offline}
-                  size="small"
-                  sx={{ bgcolor: "rgba(2, 8, 18, 0.42)", color: channelAppearance.accent, fontWeight: 800 }}
-                />
-              ) : null}
-            </Box>
-          </Box>
-
-          <Button
-            component={Link}
-            href={activeGuild ? "/guilds" : activeChannel.type === "whisper" ? `/profile/${activeChannel.recipientId}` : "/"}
-            sx={{
-              alignSelf: "center",
-              borderColor: hexToRgba(channelAppearance.accent, 0.72),
-              color: "#f8fbff",
-              display: { xs: "none", md: "inline-flex" },
-              fontWeight: 800,
-              justifySelf: "end",
-              px: 3,
-              textTransform: "none",
-              "&:hover": {
-                bgcolor: hexToRgba(channelAppearance.accent, 0.12),
-                borderColor: channelAppearance.accent,
-              },
-            }}
-            variant="outlined"
-          >
-            {activeGuild ? t.guilds : activeChannel.type === "whisper" ? t.profile : t.social}
-          </Button>
-        </Box>
+        <ChannelHero
+          activeChannel={activeChannel}
+          activeChannelTitle={activeChannelTitle}
+          activeGuild={activeGuild}
+          activeWhisperUser={activeWhisperUser}
+          appearance={channelAppearance}
+          t={t}
+        />
 
         {isAuthenticated ? (
           <>
-            <Box
-              aria-live="polite"
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 1.75,
-                minHeight: 0,
-                overflowY: "auto",
-                py: 1.5,
-              }}
-            >
-              {messages.map((message) => {
-                const isOwnMessage = message.senderId === account?.id;
-                const author = isOwnMessage ? profile?.displayName ?? t.profile : message.sender?.displayName ?? message.senderId;
-                const authorStatus = message.sender?.onlineStatus ?? (isOwnMessage ? profile?.onlineStatus : undefined);
-                const authorAvatar = resolveAvatarPath(isOwnMessage ? profile?.avatarUrl : message.sender?.avatarUrl);
-                const messageTime = new Intl.DateTimeFormat(language, {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                }).format(new Date(message.createdAt));
+            <MessageList
+              account={account}
+              activeChannel={activeChannel}
+              appearance={channelAppearance}
+              connectionError={connectionError}
+              getMessageChannelLabel={getMessageChannelLabel}
+              guildError={guildError}
+              healthError={healthError}
+              language={language}
+              messages={messages}
+              profile={profile}
+              t={t}
+              usersError={usersError}
+            />
 
-                return (
-                  <Box
-                    key={message._id}
-                    sx={{
-                      alignSelf: isOwnMessage ? "flex-end" : "flex-start",
-                      alignItems: "flex-end",
-                      display: "flex",
-                      flexDirection: isOwnMessage ? "row-reverse" : "row",
-                      gap: 1.35,
-                      maxWidth: 680,
-                      width: "min(680px, 100%)",
-                    }}
-                  >
-                    <Avatar
-                      src={authorAvatar}
-                      sx={{
-                        bgcolor: "#132337",
-                        border: `1px solid ${isOwnMessage ? channelAppearance.messageBorder : "rgba(96, 165, 250, 0.3)"}`,
-                        flex: "0 0 auto",
-                        height: { xs: 44, md: 52 },
-                        width: { xs: 44, md: 52 },
-                      }}
-                    />
-                    <Paper
-                      component="article"
-                      elevation={isOwnMessage ? 0 : 3}
-                      sx={{
-                        bgcolor: isOwnMessage ? channelAppearance.messageBg : "rgba(5, 17, 31, 0.82)",
-                        border: 1,
-                        borderColor: isOwnMessage ? channelAppearance.messageBorder : "rgba(148, 163, 184, 0.16)",
-                        color: "#e5edf7",
-                        minWidth: 0,
-                        p: 2,
-                        width: "100%",
-                      }}
-                      variant="outlined"
-                    >
-                      <Box
-                        sx={{
-                          color: "text.secondary",
-                          display: "flex",
-                          fontSize: "0.82rem",
-                          gap: 1,
-                          justifyContent: "space-between",
-                          mb: 1,
-                        }}
-                      >
-                        <Box component="span" sx={{ alignItems: "center", display: "inline-flex", gap: 0.75, minWidth: 0 }}>
-                          {activeChannel.type === "open" ? (
-                            <Chip
-                              label={getMessageChannelLabel(message)}
-                              size="small"
-                              sx={{
-                                bgcolor:
-                                  message.channelType === "guild" ? "#fff3df" : message.channelType === "whisper" ? "#eef4ff" : "#eafaf5",
-                                color: message.channelType === "guild" ? "#7c3f0b" : message.channelType === "whisper" ? "#1d4ed8" : "#0f5f59",
-                                flex: "0 0 auto",
-                                fontSize: "0.68rem",
-                                fontWeight: 700,
-                                height: 22,
-                              }}
-                            />
-                          ) : null}
-                          <Box
-                            component="span"
-                            sx={{
-                              bgcolor: authorStatus === "online" ? "primary.main" : "text.disabled",
-                              borderRadius: "50%",
-                              flex: "0 0 auto",
-                              height: 8,
-                              width: 8,
-                            }}
-                          />
-                          <Typography component="span" sx={{ fontSize: "inherit", overflowWrap: "anywhere" }}>
-                            {author}
-                          </Typography>
-                        </Box>
-                        <Typography component="time" sx={{ flex: "0 0 auto", fontSize: "inherit" }}>
-                          {messageTime}
-                        </Typography>
-                      </Box>
-                      <Typography sx={{ lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{message.content}</Typography>
-                    </Paper>
-                  </Box>
-                );
-              })}
-
-              {connectionError ? (
-                <Alert severity="warning" variant="outlined">
-                  {connectionError}
-                </Alert>
-              ) : null}
-
-              {healthError ? (
-                <Alert severity="warning" variant="outlined">
-                  {healthError}
-                </Alert>
-              ) : null}
-
-              {usersError ? (
-                <Alert severity="warning" variant="outlined">
-                  {usersError}
-                </Alert>
-              ) : null}
-
-              {guildError ? (
-                <Alert severity="warning" variant="outlined">
-                  {guildError}
-                </Alert>
-              ) : null}
-            </Box>
-
-            <Box component="form" onSubmit={handleSubmit}>
-              <Divider sx={{ borderColor: composeAppearance.messageBorder, mb: 2.5 }} />
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: { xs: "column", sm: "row" },
-                  gap: 1.25,
-                }}
-              >
-                {activeChannel.type === "open" ? (
-                  <FormControl sx={{ minWidth: { sm: 180 } }}>
-                    <InputLabel id="compose-channel-label" sx={{ color: composeAppearance.accent, "&.Mui-focused": { color: composeAppearance.accent } }}>
-                      {t.sendTo}
-                    </InputLabel>
-                    <Select
-                      label={t.sendTo}
-                      labelId="compose-channel-label"
-                      onChange={handleComposeChannelChange}
-                      sx={{
-                        color: composeAppearance.accent,
-                        fontWeight: 700,
-                        bgcolor: "rgba(2, 8, 18, 0.3)",
-                        "& .MuiOutlinedInput-notchedOutline": {
-                          borderColor: composeAppearance.messageBorder,
-                        },
-                        "&:hover .MuiOutlinedInput-notchedOutline": {
-                          borderColor: composeAppearance.accent,
-                        },
-                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                          borderColor: composeAppearance.accent,
-                        },
-                      }}
-                      value={getComposeChannelValue(composeChannel)}
-                    >
-                      <MenuItem value="global">{t.globalChat}</MenuItem>
-                      {guilds.map((guild) => (
-                        <MenuItem key={guild._id} value={`guild:${guild._id}`}>
-                          {guild.name}
-                        </MenuItem>
-                      ))}
-                      {users.map((user) => (
-                        <MenuItem key={user.accountId} value={`whisper:${user.accountId}`}>
-                          {t.whisper}: {user.displayName}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                ) : null}
-                <TextField
-                  fullWidth
-                  id="message"
-                  label={t.message}
-                  name="message"
-                  onChange={(event) => setDraft(event.target.value)}
-                  placeholder={t.typeMessage}
-                  sx={{
-                    "& .MuiOutlinedInput-input": {
-                      color: composeAppearance.accent,
-                    },
-                    "& .MuiOutlinedInput-root": {
-                      bgcolor: "rgba(2, 8, 18, 0.3)",
-                    },
-                    "& .MuiOutlinedInput-root fieldset": {
-                      borderColor: composeAppearance.messageBorder,
-                    },
-                    "& .MuiOutlinedInput-root:hover fieldset": {
-                      borderColor: composeAppearance.accent,
-                    },
-                    "& .MuiOutlinedInput-root.Mui-focused fieldset": {
-                      borderColor: composeAppearance.accent,
-                    },
-                    "& .MuiInputLabel-root": {
-                      color: composeAppearance.accent,
-                    },
-                    "& .MuiInputLabel-root.Mui-focused": {
-                      color: composeAppearance.accent,
-                    },
-                  }}
-                  value={draft}
-                />
-                <Button
-                  disabled={connectionStatus !== "connected"}
-                  sx={{
-                    bgcolor: composeAppearance.accent,
-                    minWidth: { sm: 120 },
-                    "&:hover": {
-                      bgcolor: composeAppearance.badgeColor,
-                    },
-                  }}
-                  type="submit"
-                  variant="contained"
-                >
-                  {t.send}
-                </Button>
-              </Box>
-            </Box>
+            <MessageComposer
+              activeChannelType={activeChannel.type}
+              appearance={composeAppearance}
+              composeChannel={composeChannel}
+              connectionStatus={connectionStatus}
+              draft={draft}
+              guilds={guilds}
+              onComposeChannelChange={handleComposeChannelChange}
+              onDraftChange={setDraft}
+              onSubmit={handleSubmit}
+              t={t}
+              users={users}
+            />
           </>
         ) : (
           <Box
@@ -1051,131 +329,7 @@ export default function Home() {
         )}
       </Box>
 
-      <Box
-        component="aside"
-        aria-label={t.onlinePlayers}
-        sx={{
-          bgcolor: "rgba(3, 10, 20, 0.62)",
-          color: "#e5edf7",
-          display: "flex",
-          flexDirection: "column",
-          gap: 2.5,
-          gridColumn: { xs: "1", lg: "3" },
-          minHeight: 0,
-          overflowY: "auto",
-          p: { xs: 2.5, md: 3 },
-        }}
-      >
-        <Paper
-          elevation={0}
-          sx={{
-            bgcolor: "rgba(5, 17, 31, 0.76)",
-            border: "1px solid rgba(96, 165, 250, 0.16)",
-            color: "inherit",
-            p: 2.25,
-          }}
-          variant="outlined"
-        >
-          <Box sx={{ alignItems: "center", display: "flex", justifyContent: "space-between", mb: 2 }}>
-            <Typography sx={{ color: "#c7d5e6", fontSize: "0.78rem", fontWeight: 800, letterSpacing: 1.4, textTransform: "uppercase" }}>
-              {t.onlinePlayers} - {onlineUsers.length}
-            </Typography>
-          </Box>
-
-          <TextField
-            disabled
-            fullWidth
-            placeholder="Search friends..."
-            size="small"
-            sx={{
-              mb: 2,
-              "& .MuiOutlinedInput-root": {
-                bgcolor: "rgba(2, 8, 18, 0.58)",
-                color: "#90a4ba",
-              },
-              "& .MuiOutlinedInput-notchedOutline": {
-                borderColor: "rgba(148, 163, 184, 0.18)",
-              },
-            }}
-          />
-
-          <Box sx={{ display: "grid", gap: 1.2 }}>
-            {onlineUsers.length > 0 ? (
-              onlineUsers.map((user) => (
-                <Box
-                  key={user.accountId}
-                  sx={{
-                    alignItems: "center",
-                    borderBottom: "1px solid rgba(148, 163, 184, 0.1)",
-                    display: "grid",
-                    gap: 1.25,
-                    gridTemplateColumns: "40px minmax(0, 1fr) 32px",
-                    pb: 1.15,
-                  }}
-                >
-                  <Box sx={{ position: "relative" }}>
-                    <Avatar
-                      src={resolveAvatarPath(user.avatarUrl)}
-                      sx={{
-                        bgcolor: "#132337",
-                        border: "1px solid rgba(96, 165, 250, 0.35)",
-                        height: 40,
-                        width: 40,
-                      }}
-                    />
-                    <Box
-                      sx={{
-                        bgcolor: user.onlineStatus === "online" ? "#22c55e" : user.onlineStatus === "busy" ? "#f59e0b" : "#60a5fa",
-                        border: "2px solid #06111e",
-                        borderRadius: "50%",
-                        bottom: 0,
-                        height: 12,
-                        position: "absolute",
-                        right: 0,
-                        width: 12,
-                      }}
-                    />
-                  </Box>
-                  <Box sx={{ minWidth: 0 }}>
-                    <Typography sx={{ fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.displayName}</Typography>
-                    <Typography sx={{ color: user.onlineStatus === "online" ? "#78d88f" : "#f0b35f", fontSize: "0.82rem" }}>
-                      {user.onlineStatus}
-                    </Typography>
-                  </Box>
-                  <IconButton
-                    aria-label={`${user.displayName} menu`}
-                    color="inherit"
-                    onClick={(event) => handlePlayerMenuOpen(event, user)}
-                    size="small"
-                    sx={{ color: "#f0b35f" }}
-                    type="button"
-                  >
-                    ...
-                  </IconButton>
-                </Box>
-              ))
-            ) : (
-              <Typography sx={{ color: "#8ca3ba", fontSize: "0.9rem" }}>{t.noOnlinePlayers}</Typography>
-            )}
-          </Box>
-        </Paper>
-
-        <Paper
-          elevation={0}
-          sx={{
-            bgcolor: "rgba(5, 17, 31, 0.58)",
-            border: "1px solid rgba(96, 165, 250, 0.14)",
-            color: "inherit",
-            p: 2.25,
-          }}
-          variant="outlined"
-        >
-          <Typography sx={{ color: "#c7d5e6", fontSize: "0.78rem", fontWeight: 800, letterSpacing: 1.4, mb: 1.5, textTransform: "uppercase" }}>
-            {t.apiTitle}
-          </Typography>
-          <Chip label={apiStatus} size="small" sx={{ bgcolor: isApiConnected ? "rgba(34, 197, 94, 0.14)" : "rgba(245, 158, 11, 0.14)", color: isApiConnected ? "#86efac" : "#fcd34d", fontWeight: 700 }} />
-        </Paper>
-      </Box>
+      <OnlinePlayersPanel apiStatus={apiStatus} isApiConnected={isApiConnected} onPlayerMenuOpen={handlePlayerMenuOpen} onlineUsers={onlineUsers} t={t} />
     </Box>
   );
 }
