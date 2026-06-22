@@ -57,6 +57,7 @@ type GuildState = {
   setEmblemUrl: (emblemUrl: string) => void;
   setName: (name: string) => void;
   setThemeColor: (themeColor: GuildThemeColor, emblemUrl: string) => void;
+  syncGuild: (guild: Guild) => void;
   updateGuildAppearance: (
     apiBaseUrl: string,
     accessToken: string,
@@ -272,6 +273,11 @@ export const useGuildStore = create<GuildState>((set, get) => ({
   setEmblemUrl: (emblemUrl) => set({ emblemUrl }),
   setName: (name) => set({ name }),
   setThemeColor: (themeColor, emblemUrl) => set({ emblemUrl, themeColor }),
+  syncGuild: (guild) =>
+    set((state) => ({
+      availableGuilds: state.availableGuilds.map((availableGuild) => (availableGuild._id === guild._id ? guild : availableGuild)),
+      guilds: upsertGuild(state.guilds, guild),
+    })),
   updateGuildAppearance: async (apiBaseUrl, accessToken, guildId, themeColor, emblemUrl, backgroundUrl) => {
     set({ error: null, isLoading: true });
 

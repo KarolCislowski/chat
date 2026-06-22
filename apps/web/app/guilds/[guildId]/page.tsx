@@ -11,6 +11,7 @@ import { resolveAvatarPath } from "../../../lib/avatar-options";
 import { getGuildThemeAccent, resolveGuildBackgroundUrl, resolveGuildEmblemUrl } from "../../../lib/guild-flags";
 import type { GuildThemeColor } from "../../../lib/guild-flags";
 import { useAuthStore } from "../../../stores/auth-store";
+import { useGuildStore } from "../../../stores/guild-store";
 import type { Guild, GuildRole } from "../../../stores/guild-store";
 import { useLanguageStore } from "../../../stores/language-store";
 
@@ -62,6 +63,7 @@ export default function GuildDetailsPage() {
   const hasHydrated = useAuthStore((state) => state.hasHydrated);
   const profile = useAuthStore((state) => state.profile);
   const tokens = useAuthStore((state) => state.tokens);
+  const syncGuild = useGuildStore((state) => state.syncGuild);
   const t = useLanguageStore((state) => state.t);
   const [error, setError] = useState<string | null>(null);
   const [guild, setGuild] = useState<GuildDetails | null>(null);
@@ -111,7 +113,9 @@ export default function GuildDetailsPage() {
           throw new Error(await getErrorMessage(response));
         }
 
-        setGuild((await response.json()) as GuildDetails);
+        const guildDetails = (await response.json()) as GuildDetails;
+        setGuild(guildDetails);
+        syncGuild(guildDetails);
       } catch (requestError) {
         setError(requestError instanceof Error ? requestError.message : "Guild details unavailable");
       } finally {
@@ -124,7 +128,7 @@ export default function GuildDetailsPage() {
     return () => {
       isCancelled = true;
     };
-  }, [apiBaseUrl, getFreshAccessToken, isAuthenticated, params.guildId]);
+  }, [apiBaseUrl, getFreshAccessToken, isAuthenticated, params.guildId, syncGuild]);
 
   async function mutateGuild(path: string, init: RequestInit) {
     const accessToken = await getFreshAccessToken(apiBaseUrl);
@@ -146,7 +150,9 @@ export default function GuildDetailsPage() {
         throw new Error(await getErrorMessage(response));
       }
 
-      setGuild((await response.json()) as GuildDetails);
+      const guildDetails = (await response.json()) as GuildDetails;
+      setGuild(guildDetails);
+      syncGuild(guildDetails);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Guild update failed");
     } finally {
