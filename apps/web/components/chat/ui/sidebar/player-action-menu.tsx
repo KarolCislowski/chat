@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Menu, MenuItem } from "@mui/material";
 import type { Guild } from "../../../../stores/guild-store";
 import type { ChatUser } from "../../../../stores/user-store";
@@ -57,6 +58,11 @@ export function PlayerActionMenu({
       }}
     >
       {selectedPlayer ? <MenuItem onClick={() => onStartWhisper(selectedPlayer)}>{t.startWhisper}</MenuItem> : null}
+      {selectedPlayer ? (
+        <MenuItem component={Link} href={`/profile/${selectedPlayer.accountId}`} onClick={onClose}>
+          {t.profile}
+        </MenuItem>
+      ) : null}
       {selectedPlayer
         ? manageableGuilds
             .filter((guild) => !guild.members.includes(selectedPlayer.accountId))
