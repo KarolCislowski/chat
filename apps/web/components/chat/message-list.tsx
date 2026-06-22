@@ -1,4 +1,7 @@
+"use client";
+
 import { Alert, Avatar, Box, Chip, Paper, Typography } from "@mui/material";
+import { useEffect, useRef } from "react";
 import { resolveAvatarPath } from "../../lib/avatar-options";
 import { ChannelAppearance } from "../../lib/chat/appearance";
 import { ChatView, Message } from "../../stores/chat-store";
@@ -33,9 +36,47 @@ export function MessageList({
   t,
   usersError,
 }: MessageListProps) {
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const shouldStickToBottomRef = useRef(true);
+  const lastMessageId = messages.at(-1)?._id ?? null;
+
+  function scrollToBottom(behavior: ScrollBehavior = "auto") {
+    const list = listRef.current;
+
+    if (!list) {
+      return;
+    }
+
+    list.scrollTo({ behavior, top: list.scrollHeight });
+  }
+
+  function handleScroll() {
+    const list = listRef.current;
+
+    if (!list) {
+      return;
+    }
+
+    const distanceFromBottom = list.scrollHeight - list.scrollTop - list.clientHeight;
+    shouldStickToBottomRef.current = distanceFromBottom < 96;
+  }
+
+  useEffect(() => {
+    shouldStickToBottomRef.current = true;
+    requestAnimationFrame(() => scrollToBottom());
+  }, [activeChannel]);
+
+  useEffect(() => {
+    if (shouldStickToBottomRef.current) {
+      requestAnimationFrame(() => scrollToBottom("smooth"));
+    }
+  }, [lastMessageId, messages.length]);
+
   return (
     <Box
       aria-live="polite"
+      onScroll={handleScroll}
+      ref={listRef}
       sx={{
         display: "flex",
         flexDirection: "column",
