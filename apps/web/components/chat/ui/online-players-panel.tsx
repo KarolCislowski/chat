@@ -47,7 +47,7 @@ export function OnlinePlayersPanel({ apiStatus, isApiConnected, onPlayerMenuOpen
         <TextField
           disabled
           fullWidth
-          placeholder="Search friends..."
+          placeholder={t.searchFriends}
           size="small"
           sx={{
             mb: 2,

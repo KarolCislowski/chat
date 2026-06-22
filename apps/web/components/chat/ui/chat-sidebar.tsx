@@ -63,7 +63,7 @@ export function ChatSidebar({
       }}
     >
       <List aria-label={t.conversations} disablePadding sx={{ display: "grid", gap: 0.45 }}>
-        <SidebarSectionHeading>Channels</SidebarSectionHeading>
+        <SidebarSectionHeading>{t.channels}</SidebarSectionHeading>
 
         <ChannelRailItem
           accent="#60a5fa"

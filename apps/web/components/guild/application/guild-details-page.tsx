@@ -82,6 +82,11 @@ export function GuildDetailsPage({ guildId }: GuildDetailsPageProps) {
 
     return [...(guild?.memberProfiles ?? [])].sort((left, right) => roleWeight[left.role] - roleWeight[right.role]);
   }, [guild?.memberProfiles]);
+  const roleLabels: Record<GuildRole, string> = {
+    member: t.memberRole,
+    officer: t.officerRole,
+    owner: t.ownerRole,
+  };
 
   useEffect(() => {
     if (hasHydrated && !isAuthenticated) {
@@ -120,7 +125,7 @@ export function GuildDetailsPage({ guildId }: GuildDetailsPageProps) {
         setGuild(guildDetails);
         syncGuild(guildDetails);
       } catch (requestError) {
-        setError(requestError instanceof Error ? requestError.message : "Guild details unavailable");
+        setError(requestError instanceof Error ? requestError.message : t.guildDetailsUnavailable);
       } finally {
         setIsLoading(false);
       }
@@ -131,7 +136,7 @@ export function GuildDetailsPage({ guildId }: GuildDetailsPageProps) {
     return () => {
       isCancelled = true;
     };
-  }, [apiBaseUrl, getFreshAccessToken, guildId, isAuthenticated, syncGuild]);
+  }, [apiBaseUrl, getFreshAccessToken, guildId, isAuthenticated, syncGuild, t.guildDetailsUnavailable]);
 
   async function mutateGuild(path: string, init: RequestInit) {
     const accessToken = await getFreshAccessToken(apiBaseUrl);
@@ -157,7 +162,7 @@ export function GuildDetailsPage({ guildId }: GuildDetailsPageProps) {
       setGuild(guildDetails);
       syncGuild(guildDetails);
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : "Guild update failed");
+      setError(requestError instanceof Error ? requestError.message : t.guildUpdateFailed);
     } finally {
       setIsLoading(false);
     }
@@ -229,7 +234,7 @@ export function GuildDetailsPage({ guildId }: GuildDetailsPageProps) {
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 1.5 }}>
                   <Chip label={`/${guild.slug}`} size="small" sx={{ bgcolor: "rgba(2, 8, 18, 0.42)", color: "#bfdbfe", fontWeight: 800 }} />
                   <Chip label={`${guild.members.length} ${t.members}`} size="small" sx={{ bgcolor: `${accent}26`, color: "#f8fbff", fontWeight: 800 }} />
-                  <Chip label={guild.membership.role} size="small" sx={{ borderColor: `${accent}88`, color: accent, fontWeight: 800 }} variant="outlined" />
+                  <Chip label={guild.membership.role ? roleLabels[guild.membership.role] : t.offline} size="small" sx={{ borderColor: `${accent}88`, color: accent, fontWeight: 800 }} variant="outlined" />
                 </Box>
               </Box>
               <Button
@@ -273,7 +278,7 @@ export function GuildDetailsPage({ guildId }: GuildDetailsPageProps) {
                             {member.user?.displayName ?? member.userId}
                           </Typography>
                           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75, mt: 0.55 }}>
-                            <Chip label={member.role} size="small" sx={{ bgcolor: `${accent}20`, color: "#bfdbfe", fontWeight: 800 }} />
+                            <Chip label={roleLabels[member.role]} size="small" sx={{ bgcolor: `${accent}20`, color: "#bfdbfe", fontWeight: 800 }} />
                             <Chip label={member.user?.onlineStatus ?? t.offline} size="small" sx={{ bgcolor: "rgba(96, 165, 250, 0.12)", color: "#9badbf", fontWeight: 700 }} />
                           </Box>
                         </Box>
@@ -293,8 +298,8 @@ export function GuildDetailsPage({ guildId }: GuildDetailsPageProps) {
                             }}
                             value={member.role === "owner" ? "member" : member.role}
                           >
-                            <MenuItem value="member">member</MenuItem>
-                            <MenuItem value="officer">officer</MenuItem>
+                            <MenuItem value="member">{t.memberRole}</MenuItem>
+                            <MenuItem value="officer">{t.officerRole}</MenuItem>
                           </Select>
                           <Button
                             color="warning"

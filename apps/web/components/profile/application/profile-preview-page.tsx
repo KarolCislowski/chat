@@ -93,7 +93,7 @@ export function ProfilePreviewPage({ accountId }: ProfilePreviewPageProps) {
 
         setProfile((await response.json()) as PublicProfile);
       } catch (requestError) {
-        setError(requestError instanceof Error ? requestError.message : "Profile unavailable");
+        setError(requestError instanceof Error ? requestError.message : t.profileUnavailable);
       } finally {
         setIsLoading(false);
       }
@@ -104,7 +104,7 @@ export function ProfilePreviewPage({ accountId }: ProfilePreviewPageProps) {
     return () => {
       isCancelled = true;
     };
-  }, [accountId, apiBaseUrl, getFreshAccessToken, isAuthenticated, isOwnProfile]);
+  }, [accountId, apiBaseUrl, getFreshAccessToken, isAuthenticated, isOwnProfile, t.profileUnavailable]);
 
   return (
     <PageFrame>

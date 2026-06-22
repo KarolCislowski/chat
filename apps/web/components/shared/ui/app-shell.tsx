@@ -274,8 +274,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                   }}
                 />
                 <Box sx={{ textAlign: "left" }}>
-                  <Typography sx={{ fontWeight: 800, lineHeight: 1 }}>{profile?.displayName ?? "Player"}</Typography>
-                  <Typography sx={{ color: "#78d88f", fontSize: "0.8rem" }}>{profile?.onlineStatus ?? "offline"}</Typography>
+                  <Typography sx={{ fontWeight: 800, lineHeight: 1 }}>{profile?.displayName ?? t.player}</Typography>
+                  <Typography sx={{ color: "#78d88f", fontSize: "0.8rem" }}>{profile?.onlineStatus ? t[profile.onlineStatus] : t.offline}</Typography>
                 </Box>
               </Button>
               <Menu

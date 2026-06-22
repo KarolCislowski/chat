@@ -82,6 +82,11 @@ export function GuildsPage() {
   const isAuthenticated = Boolean(profile && tokens?.accessToken);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [editingGuildId, setEditingGuildId] = useState<string | null>(null);
+  const roleLabels: Record<Exclude<Guild["membership"]["role"], null>, string> = {
+    member: t.memberRole,
+    officer: t.officerRole,
+    owner: t.ownerRole,
+  };
 
   useEffect(() => {
     if (hasHydrated && !isAuthenticated) {
@@ -335,7 +340,7 @@ export function GuildsPage() {
                         {t.guildDetails}
                       </Button>
                       <Chip
-                        label={guild.membership.role}
+                        label={guild.membership.role ? roleLabels[guild.membership.role] : t.offline}
                         size="small"
                         sx={{ borderColor: "rgba(96, 165, 250, 0.34)", color: "#bfdbfe", fontWeight: 800 }}
                         variant="outlined"
