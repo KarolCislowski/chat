@@ -48,7 +48,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   const loadUsers = useUserStore((state) => state.loadUsers);
   const isAuthenticated = Boolean(profile && tokens?.accessToken);
   const [accountMenuAnchor, setAccountMenuAnchor] = useState<HTMLElement | null>(null);
-  const activeNavKey = pathname.startsWith("/guilds") ? "guild" : pathname.startsWith("/profile") ? "profile" : "social";
+  const activeNavKey = pathname.startsWith("/play")
+    ? "play"
+    : pathname.startsWith("/shop")
+      ? "shop"
+      : pathname.startsWith("/guilds")
+        ? "guild"
+        : pathname.startsWith("/profile")
+          ? "profile"
+          : "social";
   const unreadMessageCount = Object.values(unreadByChannel).reduce((total, count) => total + count, 0);
   const showSocialUnread = activeNavKey !== "social" && unreadMessageCount > 0;
   const avatarPath = resolveAvatarPath(profile?.avatarUrl);
@@ -178,11 +186,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <Box sx={{ display: { xs: "none", md: "flex" }, justifyContent: "center", minHeight: 92 }}>
           {[
-            { href: null, key: "play", label: t.play },
+            { href: "/play", key: "play", label: t.play },
             { href: "/", key: "social", label: t.social },
             { href: "/profile", key: "profile", label: t.profile },
             { href: "/guilds", key: "guild", label: t.guilds },
-            { href: null, key: "shop", label: t.shop },
+            { href: "/shop", key: "shop", label: t.shop },
           ].map((item) => (
             <Box
               component={item.href ? Link : "span"}
