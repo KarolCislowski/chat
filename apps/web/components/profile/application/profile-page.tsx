@@ -15,52 +15,22 @@ import {
   FormControl,
   InputLabel,
   MenuItem,
-  Paper,
   Select,
   SelectChangeEvent,
-  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
 import { PageFrame } from "../../shared/ui/page-frame";
+import { PortalPanel } from "../../shared/ui/portal-panel";
+import { PortalTextField } from "../../shared/ui/portal-text-field";
+import { SectionHeader } from "../../shared/ui/section-header";
+import { portalFieldSx, portalOutlinedButtonSx, portalPanelSx, portalPrimaryButtonSx } from "../../shared/domain/portal-theme";
 import { languageLabels, UiLanguage } from "../../../i18n/translations";
 import { avatarOptions, defaultAvatar, resolveAvatarPath } from "../../../lib/avatar-options";
 import { OnlineStatus, useAuthStore } from "../../../stores/auth-store";
 import { useLanguageStore } from "../../../stores/language-store";
 
 const onlineStatusOptions: OnlineStatus[] = ["online", "away", "busy", "offline"];
-
-const panelSx = {
-  bgcolor: "rgba(4, 15, 28, 0.78)",
-  border: "1px solid rgba(96, 165, 250, 0.18)",
-  borderRadius: 1,
-  boxShadow: "0 22px 60px rgba(0, 0, 0, 0.28)",
-  color: "#e5edf7",
-};
-
-const fieldSx = {
-  "& .MuiInputBase-input": {
-    color: "#e5edf7",
-  },
-  "& .MuiInputLabel-root": {
-    color: "#8ca3ba",
-  },
-  "& .MuiInputLabel-root.Mui-focused": {
-    color: "#60a5fa",
-  },
-  "& .MuiOutlinedInput-root": {
-    bgcolor: "rgba(2, 8, 18, 0.38)",
-    "& fieldset": {
-      borderColor: "rgba(148, 163, 184, 0.2)",
-    },
-    "&:hover fieldset": {
-      borderColor: "rgba(96, 165, 250, 0.42)",
-    },
-    "&.Mui-focused fieldset": {
-      borderColor: "rgba(96, 165, 250, 0.72)",
-    },
-  },
-};
 
 /**
  * Renders the editable profile screen for the signed-in user.
@@ -184,9 +154,8 @@ export function ProfilePage() {
           width: "100%",
         }}
       >
-        <Paper
+        <PortalPanel
           sx={{
-            ...panelSx,
             alignContent: "center",
             background:
               "linear-gradient(180deg, rgba(8, 24, 39, 0.94), rgba(4, 15, 28, 0.82)), radial-gradient(circle at 50% 12%, rgba(240, 179, 95, 0.2), transparent 34%)",
@@ -265,29 +234,21 @@ export function ProfilePage() {
               <Typography sx={{ color: "#8ca3ba", fontSize: "0.85rem" }}>{account.role}</Typography>
             </Box>
           ) : null}
-        </Paper>
+        </PortalPanel>
 
-        <Paper
+        <PortalPanel
           component="form"
           onSubmit={handleSubmit}
           sx={{
-            ...panelSx,
             alignContent: "start",
             display: "grid",
             gap: 2.25,
             p: { xs: 2.5, md: 3.5 },
           }}
         >
-          <Box sx={{ display: "grid", gap: 0.5 }}>
-            <Typography sx={{ color: "#7dd3fc", fontSize: "0.75rem", fontWeight: 800, letterSpacing: 1.3, textTransform: "uppercase" }}>
-              {t.profileDetails}
-            </Typography>
-            <Typography component="h2" sx={{ color: "#f8fbff", fontSize: "1.55rem", fontWeight: 800 }}>
-              {t.saveProfile}
-            </Typography>
-          </Box>
+          <SectionHeader eyebrow={t.profileDetails} title={t.saveProfile} />
 
-          <TextField
+          <PortalTextField
             disabled={isFormDisabled}
             fullWidth
             label={t.displayName}
@@ -297,11 +258,10 @@ export function ProfilePage() {
             }}
             required
             slotProps={{ htmlInput: { maxLength: 80 } }}
-            sx={fieldSx}
             value={displayName}
           />
 
-          <TextField
+          <PortalTextField
             disabled={isFormDisabled}
             fullWidth
             label={t.statusMessage}
@@ -312,12 +272,11 @@ export function ProfilePage() {
             }}
             rows={3}
             slotProps={{ htmlInput: { maxLength: 160 } }}
-            sx={fieldSx}
             value={statusMessage}
           />
 
           <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" } }}>
-            <FormControl fullWidth sx={fieldSx}>
+            <FormControl fullWidth sx={portalFieldSx}>
               <InputLabel id="profile-status-label">{t.onlineStatus}</InputLabel>
               <Select
                 MenuProps={{ slotProps: { paper: { sx: { bgcolor: "#081827", color: "#e5edf7" } } } }}
@@ -335,7 +294,7 @@ export function ProfilePage() {
               </Select>
             </FormControl>
 
-            <FormControl fullWidth sx={fieldSx}>
+            <FormControl fullWidth sx={portalFieldSx}>
               <InputLabel id="profile-language-label">{t.language}</InputLabel>
               <Select
                 MenuProps={{ slotProps: { paper: { sx: { bgcolor: "#081827", color: "#e5edf7" } } } }}
@@ -369,7 +328,7 @@ export function ProfilePage() {
           <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: 1.25 }}>
             <Button
               disabled={isFormDisabled}
-              sx={{ bgcolor: "#1d4ed8", fontWeight: 800, textTransform: "none", "&:hover": { bgcolor: "#2563eb" } }}
+              sx={portalPrimaryButtonSx}
               type="submit"
               variant="contained"
             >
@@ -378,14 +337,14 @@ export function ProfilePage() {
             <Button
               component={Link}
               href="/"
-              sx={{ borderColor: "rgba(96, 165, 250, 0.35)", color: "#bfdbfe", fontWeight: 800, textTransform: "none" }}
+              sx={portalOutlinedButtonSx}
               type="button"
               variant="outlined"
             >
               {t.backToChat}
             </Button>
           </Box>
-        </Paper>
+        </PortalPanel>
       </Box>
 
       <Dialog
@@ -396,7 +355,7 @@ export function ProfilePage() {
         slotProps={{
           paper: {
             sx: {
-              ...panelSx,
+              ...portalPanelSx,
               bgcolor: "#06111e",
               background:
                 "linear-gradient(145deg, rgba(4, 15, 28, 0.98), rgba(8, 24, 39, 0.9)), radial-gradient(circle at 82% 0%, rgba(240, 179, 95, 0.14), transparent 34%)",
@@ -513,7 +472,7 @@ export function ProfilePage() {
         <DialogActions sx={{ gap: 1, p: 3, pt: 1 }}>
           <Button
             onClick={handleAvatarDialogClose}
-            sx={{ borderColor: "rgba(96, 165, 250, 0.35)", color: "#bfdbfe", fontWeight: 800, textTransform: "none" }}
+            sx={portalOutlinedButtonSx}
             type="button"
             variant="outlined"
           >
@@ -522,7 +481,7 @@ export function ProfilePage() {
           <Button
             disabled={isFormDisabled || pendingAvatar === selectedAvatar}
             onClick={() => void handleAvatarSave()}
-            sx={{ bgcolor: "#1d4ed8", fontWeight: 800, textTransform: "none", "&:hover": { bgcolor: "#2563eb" } }}
+            sx={portalPrimaryButtonSx}
             type="button"
             variant="contained"
           >

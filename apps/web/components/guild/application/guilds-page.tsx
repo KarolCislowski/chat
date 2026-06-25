@@ -3,8 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
-import { Alert, Box, Button, Chip, Paper, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, Chip, Typography } from "@mui/material";
 import { PageFrame } from "../../shared/ui/page-frame";
+import { PortalPanel } from "../../shared/ui/portal-panel";
+import { PortalTextField } from "../../shared/ui/portal-text-field";
+import { SectionHeader } from "../../shared/ui/section-header";
+import { portalOutlinedButtonSx, portalPrimaryButtonSx } from "../../shared/domain/portal-theme";
 import { GuildAppearancePicker } from "../ui/guild-appearance-picker";
 import { GuildBackgroundPicker } from "../ui/guild-background-picker";
 import { GuildEmblem } from "../ui/guild-emblem";
@@ -24,38 +28,6 @@ import { useLanguageStore } from "../../../stores/language-store";
 function canManageGuild(guild: Guild) {
   return guild.membership.role === "owner" || guild.membership.role === "officer";
 }
-
-const panelSx = {
-  bgcolor: "rgba(4, 15, 28, 0.78)",
-  border: "1px solid rgba(96, 165, 250, 0.16)",
-  borderRadius: 1,
-  boxShadow: "0 18px 46px rgba(0, 0, 0, 0.24)",
-  color: "#e5edf7",
-};
-
-const fieldSx = {
-  "& .MuiInputBase-input": {
-    color: "#e5edf7",
-  },
-  "& .MuiInputLabel-root": {
-    color: "#8ca3ba",
-  },
-  "& .MuiInputLabel-root.Mui-focused": {
-    color: "#60a5fa",
-  },
-  "& .MuiOutlinedInput-root": {
-    bgcolor: "rgba(2, 8, 18, 0.38)",
-    "& fieldset": {
-      borderColor: "rgba(148, 163, 184, 0.2)",
-    },
-    "&:hover fieldset": {
-      borderColor: "rgba(96, 165, 250, 0.42)",
-    },
-    "&.Mui-focused fieldset": {
-      borderColor: "rgba(96, 165, 250, 0.72)",
-    },
-  },
-};
 
 /**
  * Renders guild creation, discovery, membership, and appearance management.
@@ -184,9 +156,8 @@ export function GuildsPage() {
   return (
     <PageFrame>
       <Box sx={{ alignSelf: "start", display: "grid", gap: 3, justifySelf: "center", maxWidth: 1040, width: "100%" }}>
-        <Box
+        <PortalPanel
           sx={{
-            ...panelSx,
             alignItems: { xs: "flex-start", sm: "center" },
             background:
               "linear-gradient(90deg, rgba(8, 24, 39, 0.94), rgba(8, 24, 39, 0.68)), radial-gradient(circle at 82% 10%, rgba(240, 179, 95, 0.18), transparent 30%)",
@@ -196,28 +167,20 @@ export function GuildsPage() {
             p: { xs: 2.5, md: 3 },
           }}
         >
-          <Box>
-            <Typography sx={{ color: "#7dd3fc", fontSize: "0.75rem", fontWeight: 800, letterSpacing: 1.4, textTransform: "uppercase" }}>
-              {t.guilds}
-            </Typography>
-            <Typography component="h1" sx={{ color: "#f8fbff", fontSize: "1.9rem", fontWeight: 800, lineHeight: 1.1, mt: 0.5 }}>
-              {t.myGuilds}
-            </Typography>
-            <Typography sx={{ color: "#9badbf", mt: 0.75 }}>{t.guildLimit}</Typography>
-          </Box>
+          <SectionHeader description={t.guildLimit} eyebrow={t.guilds} title={t.myGuilds} titleComponent="h1" />
           <Button
             component={Link}
             href="/"
-            sx={{ borderColor: "rgba(96, 165, 250, 0.35)", color: "#bfdbfe", fontWeight: 800, textTransform: "none" }}
+            sx={portalOutlinedButtonSx}
             type="button"
             variant="outlined"
           >
             {t.backToChat}
           </Button>
-        </Box>
+        </PortalPanel>
 
         {!isCreateFormOpen ? (
-          <Paper sx={{ ...panelSx, alignItems: { xs: "stretch", sm: "center" }, display: "flex", gap: 1.5, justifyContent: "space-between", p: 2 }}>
+          <PortalPanel sx={{ alignItems: { xs: "stretch", sm: "center" }, display: "flex", gap: 1.5, justifyContent: "space-between", p: 2 }}>
             <Box>
               <Typography component="h2" sx={{ color: "#f0b35f", fontSize: "1.05rem", fontWeight: 800, letterSpacing: 0.4 }}>
                 {t.createGuild}
@@ -233,9 +196,9 @@ export function GuildsPage() {
             >
               + {t.createGuild}
             </Button>
-          </Paper>
+          </PortalPanel>
         ) : (
-          <Paper component="form" onSubmit={handleCreateGuild} sx={{ ...panelSx, display: "grid", gap: 1.5, p: 2.5 }}>
+          <PortalPanel component="form" onSubmit={handleCreateGuild} sx={{ display: "grid", gap: 1.5, p: 2.5 }}>
             <Box sx={{ alignItems: "center", display: "flex", gap: 1.5, justifyContent: "space-between" }}>
               <Typography component="h2" sx={{ color: "#f0b35f", fontSize: "1.05rem", fontWeight: 800, letterSpacing: 0.4 }}>
                 {t.createGuild}
@@ -245,7 +208,7 @@ export function GuildsPage() {
               </Button>
             </Box>
             <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "minmax(0, 1fr) 320px" } }}>
-              <TextField disabled={isLoading} fullWidth label={t.guildName} onChange={(event) => setName(event.target.value)} required sx={fieldSx} value={name} />
+              <PortalTextField disabled={isLoading} fullWidth label={t.guildName} onChange={(event) => setName(event.target.value)} required value={name} />
               <Box
                 sx={{
                   alignItems: "center",
@@ -287,7 +250,7 @@ export function GuildsPage() {
             <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
               <Button
                 disabled={isLoading || guilds.length >= 3}
-                sx={{ bgcolor: "#1d4ed8", fontWeight: 800, minWidth: { sm: 160 }, textTransform: "none", "&:hover": { bgcolor: "#2563eb" } }}
+                sx={[portalPrimaryButtonSx, { minWidth: { sm: 160 } }]}
                 type="submit"
                 variant="contained"
               >
@@ -297,7 +260,7 @@ export function GuildsPage() {
             <Typography sx={{ color: "#8ca3ba", fontSize: "0.85rem" }}>
               {t.guildLimit}
             </Typography>
-          </Paper>
+          </PortalPanel>
         )}
 
         {error ? (
@@ -318,10 +281,9 @@ export function GuildsPage() {
               const isEditingGuild = editingGuildId === guild._id;
 
               return (
-                <Paper
+                <PortalPanel
                   key={guild._id}
                   sx={{
-                    ...panelSx,
                     background: `linear-gradient(90deg, rgba(3, 18, 34, 0.96), rgba(4, 15, 28, 0.82)), url(${guildBackgroundUrl})`,
                     backgroundPosition: "center",
                     backgroundSize: "cover",
@@ -454,14 +416,14 @@ export function GuildsPage() {
                       ) : null}
                     </Box>
                   ) : null}
-                </Paper>
+                </PortalPanel>
               );
             })}
 
             {!isLoading && guilds.length === 0 ? (
-              <Paper sx={{ ...panelSx, p: 2.5, textAlign: "center" }}>
+              <PortalPanel sx={{ p: 2.5, textAlign: "center" }}>
                 <Typography sx={{ color: "#8ca3ba" }}>{t.noGuilds}</Typography>
-              </Paper>
+              </PortalPanel>
             ) : null}
           </Box>
 
@@ -471,10 +433,9 @@ export function GuildsPage() {
             </Typography>
 
             {availableGuilds.map((guild) => (
-              <Paper
+              <PortalPanel
                 key={guild._id}
                 sx={{
-                  ...panelSx,
                   background: `linear-gradient(90deg, rgba(3, 18, 34, 0.96), rgba(4, 15, 28, 0.82)), url(${resolveGuildBackgroundUrl(guild.backgroundUrl)})`,
                   backgroundPosition: "center",
                   backgroundSize: "cover",
@@ -500,7 +461,7 @@ export function GuildsPage() {
                     <Button
                       disabled={isLoading || guilds.length >= 3}
                       onClick={() => void handleRequestJoin(guild._id)}
-                      sx={{ bgcolor: "#1d4ed8", fontWeight: 800, textTransform: "none", "&:hover": { bgcolor: "#2563eb" } }}
+                      sx={portalPrimaryButtonSx}
                       type="button"
                       variant="contained"
                     >
@@ -508,13 +469,13 @@ export function GuildsPage() {
                     </Button>
                   )}
                 </Box>
-              </Paper>
+              </PortalPanel>
             ))}
 
             {!isLoading && availableGuilds.length === 0 ? (
-              <Paper sx={{ ...panelSx, p: 2.5, textAlign: "center" }}>
+              <PortalPanel sx={{ p: 2.5, textAlign: "center" }}>
                 <Typography sx={{ color: "#8ca3ba" }}>{t.noAvailableGuilds}</Typography>
-              </Paper>
+              </PortalPanel>
             ) : null}
           </Box>
         </Box>
