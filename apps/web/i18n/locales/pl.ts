@@ -91,6 +91,8 @@ export const pl = {
   socialHub: "Centrum społeczne",
   statusMessage: "Opis statusu",
   startWhisper: "Rozpocznij szept",
+  systemNoticeLogin: "{name} dołączył do chatu",
+  systemNoticeLogout: "{name} opuścił chat",
   updateRole: "Zmień rolę",
   memberRole: "Członek",
   officerRole: "Oficer",

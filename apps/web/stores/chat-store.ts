@@ -52,6 +52,15 @@ export type Message = {
   deletedAt: string | null;
 };
 
+/** Transient UI-only event rendered in the chat timeline for presence changes. */
+export type SystemNotice = {
+  _id: string;
+  accountId: string;
+  createdAt: string;
+  displayName: string;
+  type: "login" | "logout";
+};
+
 type PresenceChangedEvent = {
   accountId: string;
   onlineStatus: OnlineStatus;
@@ -68,6 +77,7 @@ type ChatState = {
   healthError: string | null;
   isChatViewVisible: boolean;
   messages: Message[];
+  systemNotices: SystemNotice[];
   unreadByChannel: Record<string, number>;
   /**
    * Opens the websocket connection for authenticated chat events.
@@ -227,6 +237,31 @@ function clearUnread(unreadByChannel: Record<string, number>, channel: ChatView)
   return nextUnreadByChannel;
 }
 
+/**
+ * Adds a transient presence notice while suppressing noisy reconnect flicker.
+ *
+ * @param notices - Existing UI-only system notices.
+ * @param notice - Notice candidate derived from a presence event.
+ * @returns Updated notice list capped to a small recent history.
+ */
+function upsertSystemNotice(notices: SystemNotice[], notice: SystemNotice) {
+  const lastNoticeForAccount = [...notices].reverse().find((existingNotice) => existingNotice.accountId === notice.accountId);
+
+  if (lastNoticeForAccount) {
+    const elapsedMs = new Date(notice.createdAt).getTime() - new Date(lastNoticeForAccount.createdAt).getTime();
+
+    if (lastNoticeForAccount.type !== notice.type && elapsedMs < 10_000) {
+      return notices.filter((existingNotice) => existingNotice._id !== lastNoticeForAccount._id);
+    }
+
+    if (lastNoticeForAccount.type === notice.type && elapsedMs < 30_000) {
+      return notices;
+    }
+  }
+
+  return [...notices, notice].slice(-25);
+}
+
 async function getErrorMessage(response: Response) {
   const errorPayload = (await response.json().catch(() => null)) as { message?: string | string[] } | null;
   const message = Array.isArray(errorPayload?.message) ? errorPayload.message.join(", ") : errorPayload?.message;
@@ -246,6 +281,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   healthError: null,
   isChatViewVisible: false,
   messages: [],
+  systemNotices: [],
   unreadByChannel: {},
   connectRealtime: (apiBaseUrl, accessToken) => {
     if (socket?.connected) {
@@ -299,7 +335,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
     });
 
     socket.on("presence:changed", (presence: PresenceChangedEvent) => {
-      useUserStore.getState().updateUserPresence(presence.accountId, presence.onlineStatus);
+      const userStore = useUserStore.getState();
+      const user = userStore.users.find((cachedUser) => cachedUser.accountId === presence.accountId);
+
+      userStore.updateUserPresence(presence.accountId, presence.onlineStatus);
 
       set((state) => ({
         messages: state.messages.map((message) =>
@@ -313,13 +352,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
               }
             : message,
         ),
+        systemNotices:
+          presence.accountId === state.currentAccountId || (presence.onlineStatus !== "online" && presence.onlineStatus !== "offline")
+            ? state.systemNotices
+            : upsertSystemNotice(state.systemNotices, {
+                _id: `presence:${presence.accountId}:${presence.onlineStatus}:${Date.now()}`,
+                accountId: presence.accountId,
+                createdAt: new Date().toISOString(),
+                displayName: user?.displayName ?? presence.accountId,
+                type: presence.onlineStatus === "online" ? "login" : "logout",
+              }),
       }));
     });
   },
   disconnectRealtime: () => {
     socket?.disconnect();
     socket = null;
-    set({ connectionError: null, connectionStatus: "disconnected", draft: "", messages: [], unreadByChannel: {} });
+    set({ connectionError: null, connectionStatus: "disconnected", draft: "", messages: [], systemNotices: [], unreadByChannel: {} });
   },
   loadMessages: async (apiBaseUrl, accessToken) => {
     const channel = get().activeChannel;
@@ -401,6 +450,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       connectionError: null,
       draft: "",
       messages: [],
+      systemNotices: channel.type === "open" || channel.type === "global" ? state.systemNotices : [],
       unreadByChannel: clearUnread(state.unreadByChannel, channel),
     })),
   setChatViewVisible: (isVisible) =>

@@ -4,8 +4,9 @@ import { Alert, Box } from "@mui/material";
 import { memo, useEffect, useRef } from "react";
 import type { ChannelAppearance } from "../domain/appearance";
 import type { UserAccount, UserProfile } from "../../../stores/auth-store";
-import type { ChatView, Message } from "../../../stores/chat-store";
+import type { ChatView, Message, SystemNotice } from "../../../stores/chat-store";
 import { MessageItem } from "./message-item";
+import { SystemNoticeItem } from "./system-notice-item";
 
 /** Props for the scrollable message timeline and inline status alerts. */
 type MessageListProps = {
@@ -29,9 +30,22 @@ type MessageListProps = {
   language: string;
   messages: Message[];
   profile: UserProfile | null;
+  systemNotices: SystemNotice[];
   t: Record<string, string>;
   usersError: string | null;
 };
+
+type TimelineEntry =
+  | {
+      createdAt: string;
+      message: Message;
+      type: "message";
+    }
+  | {
+      createdAt: string;
+      notice: SystemNotice;
+      type: "notice";
+    };
 
 function MessageListComponent({
   account,
@@ -44,12 +58,20 @@ function MessageListComponent({
   language,
   messages,
   profile,
+  systemNotices,
   t,
   usersError,
 }: MessageListProps) {
   const listRef = useRef<HTMLDivElement | null>(null);
   const shouldStickToBottomRef = useRef(true);
   const lastMessageId = messages.at(-1)?._id ?? null;
+  const lastNoticeId = systemNotices.at(-1)?._id ?? null;
+  const timelineEntries = [
+    ...messages.map((message): TimelineEntry => ({ createdAt: message.createdAt, message, type: "message" })),
+    ...(activeChannel.type === "open" || activeChannel.type === "global"
+      ? systemNotices.map((notice): TimelineEntry => ({ createdAt: notice.createdAt, notice, type: "notice" }))
+      : []),
+  ].sort((left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime());
 
   function scrollToBottom(behavior: ScrollBehavior = "auto") {
     const list = listRef.current;
@@ -81,7 +103,7 @@ function MessageListComponent({
     if (shouldStickToBottomRef.current) {
       requestAnimationFrame(() => scrollToBottom("smooth"));
     }
-  }, [lastMessageId, messages.length]);
+  }, [lastMessageId, lastNoticeId, messages.length, systemNotices.length]);
 
   return (
     <Box
@@ -100,19 +122,23 @@ function MessageListComponent({
         py: 1.5,
       }}
     >
-      {messages.map((message) => (
-        <MessageItem
-          account={account}
-          activeChannel={activeChannel}
-          appearance={appearance}
-          getMessageChannelLabel={getMessageChannelLabel}
-          key={message._id}
-          language={language}
-          message={message}
-          profile={profile}
-          t={t}
-        />
-      ))}
+      {timelineEntries.map((entry) =>
+        entry.type === "message" ? (
+          <MessageItem
+            account={account}
+            activeChannel={activeChannel}
+            appearance={appearance}
+            getMessageChannelLabel={getMessageChannelLabel}
+            key={entry.message._id}
+            language={language}
+            message={entry.message}
+            profile={profile}
+            t={t}
+          />
+        ) : (
+          <SystemNoticeItem appearance={appearance} key={entry.notice._id} language={language} notice={entry.notice} t={t} />
+        ),
+      )}
 
       {connectionError ? (
         <Alert severity="warning" variant="outlined">

@@ -40,6 +40,7 @@ export function useChatPage() {
   const health = useChatStore((state) => state.health);
   const healthError = useChatStore((state) => state.healthError);
   const messages = useChatStore((state) => state.messages);
+  const systemNotices = useChatStore((state) => state.systemNotices);
   const unreadByChannel = useChatStore((state) => state.unreadByChannel);
   const loadHealth = useChatStore((state) => state.loadHealth);
   const loadMessages = useChatStore((state) => state.loadMessages);
@@ -213,6 +214,7 @@ export function useChatPage() {
     setActiveChannel,
     setDraft,
     startWhisper: playerActions.startWhisper,
+    systemNotices,
     t,
     unreadByChannel,
     users,

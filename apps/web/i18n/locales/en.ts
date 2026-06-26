@@ -89,6 +89,8 @@ export const en = {
   socialHub: "Social Hub",
   statusMessage: "Status message",
   startWhisper: "Start whisper",
+  systemNoticeLogin: "{name} joined the chat",
+  systemNoticeLogout: "{name} left the chat",
   updateRole: "Update role",
   memberRole: "Member",
   officerRole: "Officer",

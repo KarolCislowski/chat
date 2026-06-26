@@ -107,6 +107,7 @@ export function ChatPage() {
               language={chatPage.language}
               messages={chatPage.messages}
               profile={chatPage.profile}
+              systemNotices={chatPage.systemNotices}
               t={chatPage.t}
               usersError={chatPage.usersError}
             />

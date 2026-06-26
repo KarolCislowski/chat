@@ -91,6 +91,8 @@ export const sv = {
   socialHub: "Social hubb",
   statusMessage: "Statusmeddelande",
   startWhisper: "Starta viskning",
+  systemNoticeLogin: "{name} gick med i chatten",
+  systemNoticeLogout: "{name} lämnade chatten",
   updateRole: "Uppdatera roll",
   memberRole: "Medlem",
   officerRole: "Officer",
