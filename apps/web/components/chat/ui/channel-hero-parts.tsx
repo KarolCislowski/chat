@@ -11,8 +11,8 @@ import type { ChatUser } from "../../../stores/user-store";
 
 /** Fully resolved visual content for the channel hero. */
 export type ChannelHeroPresentation = {
-  actionHref: string;
-  actionLabel: string;
+  actionHref: string | null;
+  actionLabel: string | null;
   avatarUrl: string;
   backgroundUrl: string;
   eyebrow: string;
@@ -47,8 +47,8 @@ export function getChannelHeroPresentation({ activeChannel, activeGuild, activeW
 
   if (activeChannel.type === "open") {
     return {
-      actionHref: "/",
-      actionLabel: t.social,
+      actionHref: null,
+      actionLabel: null,
       avatarUrl: "/assets/imgs/open_avatar.png",
       backgroundUrl: "/assets/imgs/open-bg.png",
       eyebrow: appearance.label,
@@ -68,8 +68,8 @@ export function getChannelHeroPresentation({ activeChannel, activeGuild, activeW
   }
 
   return {
-    actionHref: "/",
-    actionLabel: t.social,
+    actionHref: null,
+    actionLabel: null,
     avatarUrl: "/assets/imgs/global_avatar.png",
     backgroundUrl: "/assets/imgs/global-bg.png",
     eyebrow: appearance.label,
@@ -160,6 +160,10 @@ type ChannelHeroActionProps = {
 };
 
 export function ChannelHeroAction({ appearance, presentation }: ChannelHeroActionProps) {
+  if (!presentation.actionHref || !presentation.actionLabel) {
+    return null;
+  }
+
   return (
     <Button
       component={Link}
