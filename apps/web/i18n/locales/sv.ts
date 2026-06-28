@@ -97,6 +97,8 @@ export const sv = {
   memberRole: "Medlem",
   officerRole: "Officer",
   typeMessage: "Skriv ett meddelande...",
+  typingIndicatorMultiple: "{name} och andra skriver",
+  typingIndicatorSingle: "{name} skriver",
   users: "Användare",
   whisper: "Viskning",
   workspace: "Arbetsyta",

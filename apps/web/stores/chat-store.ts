@@ -61,9 +61,24 @@ export type SystemNotice = {
   type: "login" | "logout";
 };
 
+/** UI-only typing indicator shown for an active chat destination. */
+export type TypingIndicator = {
+  accountId: string;
+  displayName: string;
+  updatedAt: string;
+};
+
 type PresenceChangedEvent = {
   accountId: string;
   onlineStatus: OnlineStatus;
+};
+
+type TypingChangedEvent = {
+  accountId: string;
+  channelType: "global" | "guild" | "whisper";
+  guildId: string | null;
+  isTyping: boolean;
+  recipientId: string | null;
 };
 
 type ChatState = {
@@ -78,6 +93,7 @@ type ChatState = {
   isChatViewVisible: boolean;
   messages: Message[];
   systemNotices: SystemNotice[];
+  typingByChannel: Record<string, TypingIndicator[]>;
   unreadByChannel: Record<string, number>;
   /**
    * Opens the websocket connection for authenticated chat events.
@@ -129,6 +145,9 @@ type ChatState = {
 };
 
 let socket: Socket | null = null;
+let typingStopTimer: ReturnType<typeof setTimeout> | null = null;
+let activeTypingChannelKey: string | null = null;
+const typingExpiryTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 /**
  * Adds a message to a sorted list unless it has already been received.
@@ -188,6 +207,43 @@ export function getChatChannelKey(channel: ChatView) {
   }
 
   return `whisper:${channel.recipientId}`;
+}
+
+/**
+ * Converts a concrete channel into the websocket typing payload shape.
+ *
+ * @param channel - Compose destination being typed into.
+ * @returns Socket payload fields for the typing event.
+ */
+function getTypingPayload(channel: ChatChannel) {
+  return channel.type === "global"
+    ? { channelType: "global" as const }
+    : channel.type === "guild"
+      ? { channelType: "guild" as const, guildId: channel.guildId }
+      : { channelType: "whisper" as const, recipientId: channel.recipientId };
+}
+
+/**
+ * Resolves the local channel key for an inbound typing event.
+ *
+ * @param event - Typing event received from the websocket.
+ * @param currentAccountId - Current signed-in account ID, if known.
+ * @returns Channel key affected by the event, or null when incomplete.
+ */
+function getTypingChannelKey(event: TypingChangedEvent, currentAccountId: string | null) {
+  if (event.channelType === "global") {
+    return "global";
+  }
+
+  if (event.channelType === "guild") {
+    return event.guildId ? `guild:${event.guildId}` : null;
+  }
+
+  if (event.channelType === "whisper") {
+    return event.accountId === currentAccountId ? (event.recipientId ? `whisper:${event.recipientId}` : null) : `whisper:${event.accountId}`;
+  }
+
+  return null;
 }
 
 /**
@@ -262,6 +318,102 @@ function upsertSystemNotice(notices: SystemNotice[], notice: SystemNotice) {
   return [...notices, notice].slice(-25);
 }
 
+/**
+ * Removes one account from the typing indicator list for a channel.
+ *
+ * @param typingByChannel - Current typing indicators keyed by channel.
+ * @param channelKey - Channel whose typing indicator should change.
+ * @param accountId - Account to remove.
+ * @returns Updated typing map.
+ */
+function removeTypingIndicator(typingByChannel: Record<string, TypingIndicator[]>, channelKey: string, accountId: string) {
+  const remainingIndicators = (typingByChannel[channelKey] ?? []).filter((indicator) => indicator.accountId !== accountId);
+
+  if (remainingIndicators.length === 0) {
+    const nextTypingByChannel = { ...typingByChannel };
+    delete nextTypingByChannel[channelKey];
+    return nextTypingByChannel;
+  }
+
+  return {
+    ...typingByChannel,
+    [channelKey]: remainingIndicators,
+  };
+}
+
+/**
+ * Stores or refreshes one account's typing indicator for a channel.
+ *
+ * @param typingByChannel - Current typing indicators keyed by channel.
+ * @param channelKey - Channel where typing is happening.
+ * @param indicator - Indicator payload to add or refresh.
+ * @returns Updated typing map.
+ */
+function upsertTypingIndicator(typingByChannel: Record<string, TypingIndicator[]>, channelKey: string, indicator: TypingIndicator) {
+  const indicators = typingByChannel[channelKey] ?? [];
+  const nextIndicators = [indicator, ...indicators.filter((existingIndicator) => existingIndicator.accountId !== indicator.accountId)].slice(0, 4);
+
+  return {
+    ...typingByChannel,
+    [channelKey]: nextIndicators,
+  };
+}
+
+/**
+ * Emits a typing-state event for the active socket when connected.
+ *
+ * @param channel - Channel whose typing state changed.
+ * @param isTyping - Whether the user is actively typing.
+ * @returns Nothing.
+ */
+function emitTypingState(channel: ChatChannel, isTyping: boolean) {
+  if (!socket?.connected) {
+    return;
+  }
+
+  socket.emit("typing:changed", {
+    ...getTypingPayload(channel),
+    isTyping,
+  });
+}
+
+/**
+ * Schedules a delayed typing-stop event after local composer inactivity.
+ *
+ * @param channel - Channel currently being typed into.
+ * @returns Nothing.
+ */
+function scheduleTypingStop(channel: ChatChannel) {
+  if (typingStopTimer) {
+    clearTimeout(typingStopTimer);
+  }
+
+  typingStopTimer = setTimeout(() => {
+    emitTypingState(channel, false);
+    activeTypingChannelKey = null;
+    typingStopTimer = null;
+  }, 1800);
+}
+
+/**
+ * Clears all pending typing timers and optionally notifies the last channel.
+ *
+ * @param channel - Channel that should receive a final stop event, if any.
+ * @returns Nothing.
+ */
+function clearLocalTyping(channel?: ChatChannel) {
+  if (typingStopTimer) {
+    clearTimeout(typingStopTimer);
+    typingStopTimer = null;
+  }
+
+  if (channel && activeTypingChannelKey) {
+    emitTypingState(channel, false);
+  }
+
+  activeTypingChannelKey = null;
+}
+
 async function getErrorMessage(response: Response) {
   const errorPayload = (await response.json().catch(() => null)) as { message?: string | string[] } | null;
   const message = Array.isArray(errorPayload?.message) ? errorPayload.message.join(", ") : errorPayload?.message;
@@ -282,6 +434,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isChatViewVisible: false,
   messages: [],
   systemNotices: [],
+  typingByChannel: {},
   unreadByChannel: {},
   connectRealtime: (apiBaseUrl, accessToken) => {
     if (socket?.connected) {
@@ -364,11 +517,60 @@ export const useChatStore = create<ChatState>((set, get) => ({
               }),
       }));
     });
+
+    socket.on("typing:changed", (typingEvent: TypingChangedEvent) => {
+      set((state) => {
+        if (typingEvent.accountId === state.currentAccountId) {
+          return state;
+        }
+
+        const channelKey = getTypingChannelKey(typingEvent, state.currentAccountId);
+
+        if (!channelKey) {
+          return state;
+        }
+
+        const timerKey = `${channelKey}:${typingEvent.accountId}`;
+        const existingTimer = typingExpiryTimers.get(timerKey);
+
+        if (existingTimer) {
+          clearTimeout(existingTimer);
+          typingExpiryTimers.delete(timerKey);
+        }
+
+        if (!typingEvent.isTyping) {
+          return {
+            typingByChannel: removeTypingIndicator(state.typingByChannel, channelKey, typingEvent.accountId),
+          };
+        }
+
+        const user = useUserStore.getState().users.find((cachedUser) => cachedUser.accountId === typingEvent.accountId);
+        const expiryTimer = setTimeout(() => {
+          useChatStore.setState((currentState) => ({
+            typingByChannel: removeTypingIndicator(currentState.typingByChannel, channelKey, typingEvent.accountId),
+          }));
+          typingExpiryTimers.delete(timerKey);
+        }, 3500);
+
+        typingExpiryTimers.set(timerKey, expiryTimer);
+
+        return {
+          typingByChannel: upsertTypingIndicator(state.typingByChannel, channelKey, {
+            accountId: typingEvent.accountId,
+            displayName: user?.displayName ?? typingEvent.accountId,
+            updatedAt: new Date().toISOString(),
+          }),
+        };
+      });
+    });
   },
   disconnectRealtime: () => {
+    clearLocalTyping();
+    typingExpiryTimers.forEach((timer) => clearTimeout(timer));
+    typingExpiryTimers.clear();
     socket?.disconnect();
     socket = null;
-    set({ connectionError: null, connectionStatus: "disconnected", draft: "", messages: [], systemNotices: [], unreadByChannel: {} });
+    set({ connectionError: null, connectionStatus: "disconnected", draft: "", messages: [], systemNotices: [], typingByChannel: {}, unreadByChannel: {} });
   },
   loadMessages: async (apiBaseUrl, accessToken) => {
     const channel = get().activeChannel;
@@ -441,24 +643,54 @@ export const useChatStore = create<ChatState>((set, get) => ({
           ? { channelType: "guild", content: text, guildId: channel.guildId }
           : { channelType: "whisper", content: text, recipientId: channel.recipientId },
     );
+    clearLocalTyping(channel);
     set({ connectionError: null, draft: "" });
   },
   setActiveChannel: (channel) =>
-    set((state) => ({
-      activeChannel: channel,
-      composeChannel: channel.type === "open" ? state.composeChannel : channel,
-      connectionError: null,
-      draft: "",
-      messages: [],
-      systemNotices: channel.type === "open" || channel.type === "global" ? state.systemNotices : [],
-      unreadByChannel: clearUnread(state.unreadByChannel, channel),
-    })),
+    set((state) => {
+      clearLocalTyping(state.composeChannel);
+
+      return {
+        activeChannel: channel,
+        composeChannel: channel.type === "open" ? state.composeChannel : channel,
+        connectionError: null,
+        draft: "",
+        messages: [],
+        systemNotices: channel.type === "open" || channel.type === "global" ? state.systemNotices : [],
+        unreadByChannel: clearUnread(state.unreadByChannel, channel),
+      };
+    }),
   setChatViewVisible: (isVisible) =>
     set((state) => ({
       isChatViewVisible: isVisible,
       unreadByChannel: isVisible ? clearUnread(state.unreadByChannel, state.activeChannel) : state.unreadByChannel,
     })),
-  setComposeChannel: (channel) => set({ composeChannel: channel }),
+  setComposeChannel: (channel) =>
+    set((state) => {
+      clearLocalTyping(state.composeChannel);
+
+      return { composeChannel: channel };
+    }),
   setCurrentAccountId: (accountId) => set({ currentAccountId: accountId }),
-  setDraft: (draft) => set({ draft }),
+  setDraft: (draft) => {
+    const channel = get().composeChannel;
+    const channelKey = getChatChannelKey(channel);
+
+    if (draft.trim()) {
+      if (activeTypingChannelKey !== channelKey) {
+        if (activeTypingChannelKey) {
+          clearLocalTyping(channel);
+        }
+
+        emitTypingState(channel, true);
+        activeTypingChannelKey = channelKey;
+      }
+
+      scheduleTypingStop(channel);
+    } else {
+      clearLocalTyping(channel);
+    }
+
+    set({ draft });
+  },
 }));

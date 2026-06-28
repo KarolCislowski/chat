@@ -14,6 +14,7 @@ import { GuildsService } from "../guilds/guilds.service";
 import { UserRole } from "../users/schemas/user-account.schema";
 import { UsersService } from "../users/users.service";
 import { CreateGlobalMessageDto } from "./dto/create-global-message.dto";
+import { TypingEventDto } from "./dto/typing-event.dto";
 import { MessagesService } from "./messages.service";
 
 /** Authenticated user data stored on each accepted chat socket. */
@@ -151,6 +152,54 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
       senderId: user.accountId,
     });
     this.server.emit("message:created", message);
+  }
+
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  @SubscribeMessage("typing:changed")
+  /**
+   * Relays transient typing-state changes to the destination channel members.
+   *
+   * @param client - Authenticated socket that sent the typing event.
+   * @param dto - Validated typing-state payload.
+   * @returns A promise that resolves after the event is broadcast.
+   */
+  async changeTypingState(@ConnectedSocket() client: AuthenticatedSocket, @MessageBody() dto: TypingEventDto) {
+    const user = client.data.user;
+
+    if (!user) {
+      throw new UnauthorizedException("Socket is not authenticated.");
+    }
+
+    const event = {
+      accountId: user.accountId,
+      channelType: dto.channelType,
+      guildId: dto.guildId ?? null,
+      isTyping: dto.isTyping,
+      recipientId: dto.recipientId ?? null,
+    };
+
+    if (dto.channelType === "guild") {
+      if (!dto.guildId) {
+        client.emit("chat:error", { message: "Guild typing event requires guildId." });
+        return;
+      }
+
+      await this.guildsService.assertGuildMembership(user.accountId, dto.guildId);
+      client.to(this.getGuildRoom(dto.guildId)).emit("typing:changed", event);
+      return;
+    }
+
+    if (dto.channelType === "whisper") {
+      if (!dto.recipientId) {
+        client.emit("chat:error", { message: "Whisper typing event requires recipientId." });
+        return;
+      }
+
+      client.to(this.getUserRoom(dto.recipientId)).emit("typing:changed", event);
+      return;
+    }
+
+    client.broadcast.emit("typing:changed", event);
   }
 
   /**

@@ -17,7 +17,7 @@ import {
   isApiHealthy,
 } from "../domain/page-state";
 import { useAuthStore } from "../../../stores/auth-store";
-import { useChatStore } from "../../../stores/chat-store";
+import { getChatChannelKey, useChatStore } from "../../../stores/chat-store";
 import type { Message } from "../../../stores/chat-store";
 import { useGuildStore } from "../../../stores/guild-store";
 import { useLanguageStore } from "../../../stores/language-store";
@@ -41,6 +41,7 @@ export function useChatPage() {
   const healthError = useChatStore((state) => state.healthError);
   const messages = useChatStore((state) => state.messages);
   const systemNotices = useChatStore((state) => state.systemNotices);
+  const typingByChannel = useChatStore((state) => state.typingByChannel);
   const unreadByChannel = useChatStore((state) => state.unreadByChannel);
   const loadHealth = useChatStore((state) => state.loadHealth);
   const loadMessages = useChatStore((state) => state.loadMessages);
@@ -122,6 +123,13 @@ export function useChatPage() {
   const composeAppearance = useMemo(() => getComposeAppearance(composeChannel, composeGuild), [composeChannel, composeGuild]);
   const manageableGuilds = useMemo(() => getManageableGuilds(guilds), [guilds]);
   const onlineUsers = useMemo(() => getOnlineUsers(users), [users]);
+  const typingIndicators = useMemo(() => {
+    if (activeChannel.type === "open") {
+      return Object.values(typingByChannel).flat();
+    }
+
+    return typingByChannel[getChatChannelKey(activeChannel)] ?? [];
+  }, [activeChannel, typingByChannel]);
 
   /**
    * Submits the current chat draft to the selected compose channel.
@@ -216,6 +224,7 @@ export function useChatPage() {
     startWhisper: playerActions.startWhisper,
     systemNotices,
     t,
+    typingIndicators,
     unreadByChannel,
     users,
     usersError,

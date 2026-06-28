@@ -95,6 +95,8 @@ export const en = {
   memberRole: "Member",
   officerRole: "Officer",
   typeMessage: "Type a message...",
+  typingIndicatorMultiple: "{name} and others are typing",
+  typingIndicatorSingle: "{name} is typing",
   users: "Users",
   whisper: "Whisper",
   workspace: "Workspace",

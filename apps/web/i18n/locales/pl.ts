@@ -97,6 +97,8 @@ export const pl = {
   memberRole: "Członek",
   officerRole: "Oficer",
   typeMessage: "Napisz wiadomość...",
+  typingIndicatorMultiple: "{name} i inni piszą",
+  typingIndicatorSingle: "{name} pisze",
   users: "Użytkownicy",
   whisper: "Szept",
   workspace: "Workspace",

@@ -9,6 +9,7 @@ import { ChatSidebar } from "../ui/chat-sidebar";
 import { MessageComposer } from "../ui/message-composer";
 import { MessageList } from "../ui/message-list";
 import { OnlinePlayersPanel } from "../ui/online-players-panel";
+import { TypingIndicator } from "../ui/typing-indicator";
 import { useChatPage } from "./use-chat-page";
 
 /**
@@ -112,19 +113,22 @@ export function ChatPage() {
               usersError={chatPage.usersError}
             />
 
-            <MessageComposer
-              activeChannelType={chatPage.activeChannel.type}
-              appearance={chatPage.composeAppearance}
-              composeChannel={chatPage.composeChannel}
-              connectionStatus={chatPage.connectionStatus}
-              draft={chatPage.draft}
-              guilds={chatPage.guilds}
-              onComposeChannelChange={chatPage.handleComposeChannelChange}
-              onDraftChange={chatPage.setDraft}
-              onSubmit={chatPage.handleSubmit}
-              t={chatPage.t}
-              users={chatPage.users}
-            />
+            <Box sx={{ display: "grid", gap: 0.75, minWidth: 0 }}>
+              <TypingIndicator appearance={chatPage.composeAppearance} indicators={chatPage.typingIndicators} t={chatPage.t} />
+              <MessageComposer
+                activeChannelType={chatPage.activeChannel.type}
+                appearance={chatPage.composeAppearance}
+                composeChannel={chatPage.composeChannel}
+                connectionStatus={chatPage.connectionStatus}
+                draft={chatPage.draft}
+                guilds={chatPage.guilds}
+                onComposeChannelChange={chatPage.handleComposeChannelChange}
+                onDraftChange={chatPage.setDraft}
+                onSubmit={chatPage.handleSubmit}
+                t={chatPage.t}
+                users={chatPage.users}
+              />
+            </Box>
           </>
         ) : (
           <Box
