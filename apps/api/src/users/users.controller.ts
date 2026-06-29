@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Req, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth, ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { AuthenticatedRequest } from "../auth/types/authenticated-request";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
@@ -6,6 +7,8 @@ import { UserAccountDocument } from "./schemas/user-account.schema";
 import { UserProfileDocument } from "./schemas/user-profile.schema";
 import { UsersService } from "./users.service";
 
+@ApiTags("users")
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller("users")
 /** HTTP controller for account profile and user discovery endpoints. */
@@ -19,6 +22,7 @@ export class UsersController {
    * @returns Current account and profile response.
    */
   @Get("me")
+  @ApiOkResponse({ description: "Current account and profile." })
   async getMe(@Req() request: AuthenticatedRequest) {
     const { account, profile } = await this.usersService.getAccountWithProfile(request.user.accountId);
 
@@ -36,6 +40,7 @@ export class UsersController {
    * @returns Updated public profile response.
    */
   @Patch("me/profile")
+  @ApiOkResponse({ description: "Updated current profile." })
   async updateMyProfile(@Req() request: AuthenticatedRequest, @Body() dto: UpdateProfileDto) {
     const profile = await this.usersService.updateProfile(request.user.accountId, dto);
 
@@ -64,6 +69,7 @@ export class UsersController {
    * @returns Public profile responses.
    */
   @Get()
+  @ApiOkResponse({ description: "Public profiles available for chat interactions." })
   async listUsers(@Req() request: AuthenticatedRequest) {
     const profiles = await this.usersService.listProfiles(request.user.accountId);
 
@@ -77,6 +83,7 @@ export class UsersController {
    * @returns Public profile response.
    */
   @Get(":accountId")
+  @ApiOkResponse({ description: "Public profile for the provided account ID." })
   async getProfile(@Param("accountId") accountId: string) {
     const profile = await this.usersService.getProfileByAccountId(accountId);
 

@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { AuthenticatedRequest } from "../auth/types/authenticated-request";
 import { CreateGuildDto } from "./dto/create-guild.dto";
@@ -8,6 +9,8 @@ import { UpdateGuildAppearanceDto } from "./dto/update-guild-appearance.dto";
 import { UpdateGuildMemberRoleDto } from "./dto/update-guild-member-role.dto";
 import { GuildsService } from "./guilds.service";
 
+@ApiTags("guilds")
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller("guilds")
 /** HTTP controller for guild membership, discovery, requests, and management endpoints. */
@@ -21,6 +24,7 @@ export class GuildsController {
    * @returns Guilds for the current account.
    */
   @Get("mine")
+  @ApiOkResponse({ description: "Guilds where the current account is a member." })
   getMyGuilds(@Req() request: AuthenticatedRequest) {
     return this.guildsService.getMyGuilds(request.user.accountId);
   }
@@ -32,6 +36,7 @@ export class GuildsController {
    * @returns Available guilds with pending request state.
    */
   @Get("available")
+  @ApiOkResponse({ description: "Guilds the current account can request to join." })
   getAvailableGuilds(@Req() request: AuthenticatedRequest) {
     return this.guildsService.getAvailableGuilds(request.user.accountId);
   }
@@ -44,6 +49,7 @@ export class GuildsController {
    * @returns Detailed guild response.
    */
   @Get(":guildId")
+  @ApiOkResponse({ description: "Detailed guild data for a member." })
   getGuildDetails(@Req() request: AuthenticatedRequest, @Param("guildId") guildId: string) {
     return this.guildsService.getGuildDetails(request.user.accountId, guildId);
   }
@@ -56,6 +62,7 @@ export class GuildsController {
    * @returns Created guild response.
    */
   @Post()
+  @ApiCreatedResponse({ description: "Guild created and owner membership assigned." })
   createGuild(@Req() request: AuthenticatedRequest, @Body() dto: CreateGuildDto) {
     return this.guildsService.createGuild(request.user.accountId, dto.name, dto.themeColor, dto.emblemUrl, dto.backgroundUrl);
   }
@@ -69,6 +76,7 @@ export class GuildsController {
    * @returns Detailed guild response.
    */
   @Patch(":guildId/appearance")
+  @ApiOkResponse({ description: "Guild appearance updated." })
   updateAppearance(@Req() request: AuthenticatedRequest, @Param("guildId") guildId: string, @Body() dto: UpdateGuildAppearanceDto) {
     return this.guildsService.updateAppearance(request.user.accountId, guildId, dto.themeColor, dto.emblemUrl, dto.backgroundUrl);
   }
@@ -81,6 +89,7 @@ export class GuildsController {
    * @returns Joined guild response.
    */
   @Post("join")
+  @ApiCreatedResponse({ description: "Joined guild through invite code." })
   joinGuild(@Req() request: AuthenticatedRequest, @Body() dto: JoinGuildDto) {
     return this.guildsService.joinGuild(request.user.accountId, dto.inviteCode);
   }
@@ -93,6 +102,7 @@ export class GuildsController {
    * @returns Invite code and guild response.
    */
   @Post(":guildId/invites")
+  @ApiCreatedResponse({ description: "Invite code created for the guild." })
   createInvite(@Req() request: AuthenticatedRequest, @Param("guildId") guildId: string) {
     return this.guildsService.createInvite(request.user.accountId, guildId);
   }
@@ -106,6 +116,7 @@ export class GuildsController {
    * @returns Updated guild response.
    */
   @Post(":guildId/members")
+  @ApiCreatedResponse({ description: "Member added directly to the guild." })
   inviteMember(@Req() request: AuthenticatedRequest, @Param("guildId") guildId: string, @Body() dto: InviteGuildMemberDto) {
     return this.guildsService.inviteMember(request.user.accountId, guildId, dto.userId);
   }
@@ -120,6 +131,7 @@ export class GuildsController {
    * @returns Detailed guild response.
    */
   @Patch(":guildId/members/:userId/role")
+  @ApiOkResponse({ description: "Guild member role updated." })
   updateMemberRole(
     @Req() request: AuthenticatedRequest,
     @Param("guildId") guildId: string,
@@ -138,6 +150,7 @@ export class GuildsController {
    * @returns Detailed guild response.
    */
   @Delete(":guildId/members/:userId")
+  @ApiOkResponse({ description: "Guild member removed." })
   removeMember(@Req() request: AuthenticatedRequest, @Param("guildId") guildId: string, @Param("userId") userId: string) {
     return this.guildsService.removeMember(request.user.accountId, guildId, userId);
   }
@@ -150,6 +163,7 @@ export class GuildsController {
    * @returns Pending join request responses.
    */
   @Get(":guildId/join-requests")
+  @ApiOkResponse({ description: "Pending join requests for the guild." })
   getJoinRequests(@Req() request: AuthenticatedRequest, @Param("guildId") guildId: string) {
     return this.guildsService.getJoinRequests(request.user.accountId, guildId);
   }
@@ -162,6 +176,7 @@ export class GuildsController {
    * @returns Created join request response.
    */
   @Post(":guildId/join-requests")
+  @ApiCreatedResponse({ description: "Join request created." })
   requestJoin(@Req() request: AuthenticatedRequest, @Param("guildId") guildId: string) {
     return this.guildsService.requestJoin(request.user.accountId, guildId);
   }
@@ -175,6 +190,7 @@ export class GuildsController {
    * @returns Updated join request response.
    */
   @Post(":guildId/join-requests/:requestId/accept")
+  @ApiOkResponse({ description: "Join request accepted." })
   acceptJoinRequest(
     @Req() request: AuthenticatedRequest,
     @Param("guildId") guildId: string,

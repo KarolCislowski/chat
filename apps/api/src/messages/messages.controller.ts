@@ -1,8 +1,11 @@
 import { Controller, Get, Param, Query, Req, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth, ApiOkResponse, ApiQuery, ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { AuthenticatedRequest } from "../auth/types/authenticated-request";
 import { MessagesService } from "./messages.service";
 
+@ApiTags("messages")
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller("messages")
 /** HTTP controller for loading persisted chat history. */
@@ -17,6 +20,8 @@ export class MessagesController {
    * @returns Open-chat message history.
    */
   @Get("open")
+  @ApiQuery({ name: "limit", required: false, type: Number })
+  @ApiOkResponse({ description: "Aggregate open-chat message history." })
   getOpenMessages(@Req() request: AuthenticatedRequest, @Query("limit") limit?: string) {
     return this.messagesService.getOpenMessages(request.user.accountId, Number(limit) || 100);
   }
@@ -28,6 +33,8 @@ export class MessagesController {
    * @returns Global message history.
    */
   @Get("global")
+  @ApiQuery({ name: "limit", required: false, type: Number })
+  @ApiOkResponse({ description: "Global chat message history." })
   getGlobalMessages(@Query("limit") limit?: string) {
     return this.messagesService.getGlobalMessages(Number(limit) || 50);
   }
@@ -41,6 +48,8 @@ export class MessagesController {
    * @returns Guild message history.
    */
   @Get("guild/:guildId")
+  @ApiQuery({ name: "limit", required: false, type: Number })
+  @ApiOkResponse({ description: "Guild channel message history." })
   getGuildMessages(@Req() request: AuthenticatedRequest, @Param("guildId") guildId: string, @Query("limit") limit?: string) {
     return this.messagesService.getGuildMessages(request.user.accountId, guildId, Number(limit) || 50);
   }
@@ -54,6 +63,8 @@ export class MessagesController {
    * @returns Whisper message history.
    */
   @Get("whisper/:recipientId")
+  @ApiQuery({ name: "limit", required: false, type: Number })
+  @ApiOkResponse({ description: "Whisper conversation message history." })
   getWhisperMessages(@Req() request: AuthenticatedRequest, @Param("recipientId") recipientId: string, @Query("limit") limit?: string) {
     return this.messagesService.getWhisperMessages(request.user.accountId, recipientId, Number(limit) || 50);
   }

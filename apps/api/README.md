@@ -12,6 +12,7 @@ NestJS backend for the Dworven Shaft social hub.
 - Guild creation, membership limit, role management, join requests, and invite codes
 - Guild appearance persistence for theme color, emblem, and hero background
 - MongoDB message retention limits and 30-day expiry
+- Swagger/OpenAPI documentation at `/docs`
 
 ## Tech
 
@@ -19,6 +20,7 @@ NestJS backend for the Dworven Shaft social hub.
 - Mongoose and MongoDB
 - Socket.IO
 - `@nestjs/jwt`
+- `@nestjs/swagger`
 - bcrypt
 - class-validator / class-transformer
 - TypeScript
@@ -32,6 +34,8 @@ npm run start:dev
 ```
 
 The API runs at `http://localhost:5000`.
+
+Swagger UI is available at `http://localhost:5000/docs`.
 
 The default `MONGODB_URI` from `.env.example` expects MongoDB to be available on `localhost:27017`. From the repository root you can start MongoDB with:
 
@@ -71,6 +75,7 @@ Public:
 - `POST /auth/register`
 - `POST /auth/login`
 - `POST /auth/refresh`
+- `GET /docs`
 
 Authenticated endpoints require:
 
@@ -125,6 +130,7 @@ Authentication:
 Client event:
 
 - `message:create`
+- `typing:changed`
 
 Payload:
 
@@ -137,9 +143,21 @@ Payload:
 }
 ```
 
+Typing payload:
+
+```ts
+{
+  channelType: "global" | "guild" | "whisper";
+  guildId?: string;
+  recipientId?: string;
+  isTyping: boolean;
+}
+```
+
 Server events:
 
 - `message:created`
+- `typing:changed`
 - `presence:changed`
 - `chat:error`
 
