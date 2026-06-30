@@ -21,6 +21,7 @@ apps/
   web/   Next.js frontend
 docker/
   mongo/ MongoDB init scripts
+docs/    Project wiki and architecture notes
 ```
 
 The repository root does not define a shared npm workspace script. Run package commands from `apps/web` or `apps/api`.
@@ -77,5 +78,6 @@ npm run build
 
 ## Documentation
 
+- [Project Wiki](docs/README.md)
 - [Web README](apps/web/README.md)
 - [API README](apps/api/README.md)
